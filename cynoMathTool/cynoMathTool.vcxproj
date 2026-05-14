@@ -170,39 +170,31 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BlackScholes.cpp" />
-    <ClCompile Include="BlackSholesDoubleBarrier.cpp" />
-    <ClCompile Include="Integration_fin.cpp" />
-    <ClCompile Include="integration_GH.cpp" />
-    <ClCompile Include="integration_GL.cpp" />
-    <ClCompile Include="matrix.cpp" />
-    <ClCompile Include="cynoMathUtility.cpp" />
-    <ClCompile Include="pch.cpp">
+    <ClCompile Include="BlackScholes.c" />
+    <ClCompile Include="BlackSholesDoubleBarrier.c" />
+    <ClCompile Include="Integration_fin.c" />
+    <ClCompile Include="integration_GH.c" />
+    <ClCompile Include="integration_GL.c" />
+    <ClCompile Include="matrix.c" />
+    <ClCompile Include="cynoMathUtility.c" />
+    <ClCompile Include="pch.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="optimizer.cpp" />
-    <ClCompile Include="BlackScholesBarrierOption.cpp" />
-    <ClCompile Include="specialFunctions.cpp" />
-    <ClCompile Include="randomNumber.cpp" />
-    <ClCompile Include="sorting.cpp" />
-    <ClCompile Include="rootFinder.cpp" />
-    <ClCompile Include="MTRandomNumber.cpp" />
+    <ClCompile Include="optimizer.c" />
+    <ClCompile Include="BlackScholesBarrierOption.c" />
+    <ClCompile Include="specialFunctions.c" />
+    <ClCompile Include="randomNumber.c" />
+    <ClCompile Include="sorting.c" />
+    <ClCompile Include="rootFinder.c" />
+    <ClCompile Include="MTRandomNumber.c" />
+    <ClCompile Include="sobol.c" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="Source.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\packages\CodePorting.Native.Cs2Cpp.API.22.5.0\build\native\CodePorting.Native.Cs2Cpp.API.targets" Condition="Exists('..\packages\CodePorting.Native.Cs2Cpp.API.22.5.0\build\native\CodePorting.Native.Cs2Cpp.API.targets')" />
-  </ImportGroup>
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\packages\CodePorting.Native.Cs2Cpp.API.22.5.0\build\native\CodePorting.Native.Cs2Cpp.API.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\CodePorting.Native.Cs2Cpp.API.22.5.0\build\native\CodePorting.Native.Cs2Cpp.API.targets'))" />
-  </Target>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

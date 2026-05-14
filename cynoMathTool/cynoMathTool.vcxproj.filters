@@ -44,49 +44,52 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="pch.cpp">
+    <ClCompile Include="pch.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cynoMathUtility.cpp">
+    <ClCompile Include="cynoMathUtility.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="sorting.cpp">
+    <ClCompile Include="sorting.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Integration_fin.cpp">
+    <ClCompile Include="Integration_fin.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="rootFinder.cpp">
+    <ClCompile Include="rootFinder.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="integration_GH.cpp">
+    <ClCompile Include="integration_GH.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="integration_GL.cpp">
+    <ClCompile Include="integration_GL.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="matrix.cpp">
+    <ClCompile Include="matrix.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="randomNumber.cpp">
+    <ClCompile Include="randomNumber.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MTRandomNumber.cpp">
+    <ClCompile Include="MTRandomNumber.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="specialFunctions.cpp">
+    <ClCompile Include="specialFunctions.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="optimizer.cpp">
+    <ClCompile Include="optimizer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlackScholes.cpp">
+    <ClCompile Include="BlackScholes.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlackScholesBarrierOption.cpp">
+    <ClCompile Include="BlackScholesBarrierOption.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlackSholesDoubleBarrier.cpp">
+    <ClCompile Include="BlackSholesDoubleBarrier.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sobol.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -94,6 +97,5 @@
     <None Include="Source.def">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="packages.config" />
   </ItemGroup>
 </Project>
