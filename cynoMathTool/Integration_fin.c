@@ -3,8 +3,8 @@
 #include "math.h"
 
 
-const int MAXLIMIT = 601;
-const int MAXPOINTS = 301;
+#define MAXLIMIT 601
+#define MAXPOINTS 301
 
 void dqelg(short n, double EPSTAB[], double* result, double* ABSERR,
     double RES3LA[], short* NRES)
@@ -771,7 +771,7 @@ CYNOMATHUTILITY_API void __stdcall cyno_IntegrationFin(FUNCPTR vbFunc, short Min
     short IROFF3, j, JLOW, JUPBND;
     short k, KSGN, KTMIN, LAST;
     short LEVCUR, LEVMAX;
-    short MAXERR, NINT, NINTP1, nPts;
+    short MAXERR, NINT, nPts;
     short NRES, NRMAX, NUMRL2, NPTS2;
     bool EXTRAP, NOEXT;
 
@@ -903,9 +903,6 @@ CYNOMATHUTILITY_API void __stdcall cyno_IntegrationFin(FUNCPTR vbFunc, short Min
         SIGN = (double)(-1);
     NINT = nPts + 1;
     A1 = PTS[1];
-    NINTP1 = NINT + 1;
-
- 
     RESABS = (double)0;
     for (i = 1; i <= NINT; i++) {
         B1 = PTS[i + 1];
