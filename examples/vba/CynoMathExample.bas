@@ -28,6 +28,13 @@ Public Declare PtrSafe Function cyno_NormalRand1DArrayAntithetic Lib "cynoMathTo
     ByVal size As Long, _
     ByVal randflag As Integer) As Boolean
 
+Public Declare PtrSafe Function cyno_CorrelatedNormalRand2DArrayPlain Lib "cynoMathTools.dll" ( _
+    ByRef correlationMatrix As Double, _
+    ByVal dim As Long, _
+    ByRef outArray As Double, _
+    ByVal samplesPerFactor As Long, _
+    ByVal randflag As Integer) As Boolean
+
 Public Declare PtrSafe Function cyno_MatrixMultiplyPlain Lib "cynoMathTools.dll" ( _
     ByRef a As Double, _
     ByVal aRows As Long, _
@@ -106,4 +113,29 @@ Public Sub RunCynoSortExample()
     For i = 0 To 3
         Debug.Print "position"; i; "index"; sortedIndex(i); "value"; values(sortedIndex(i))
     Next i
+End Sub
+
+Public Sub RunCynoNormal2DExample()
+    Dim corr(0 To 3) As Double
+    Dim normals(0 To 7) As Double
+    Dim samplesPerFactor As Long
+    Dim factor As Long
+    Dim sample As Long
+    Dim ok As Boolean
+
+    samplesPerFactor = 4
+
+    ' 2x2 identity matrix gives independent standard normals.
+    corr(0) = 1#: corr(1) = 0#
+    corr(2) = 0#: corr(3) = 1#
+
+    ok = cyno_CorrelatedNormalRand2DArrayPlain(corr(0), 2, normals(0), samplesPerFactor, 1)
+    Debug.Print "2D normal fill ok:", ok
+
+    For factor = 0 To 1
+        Debug.Print "factor"; factor
+        For sample = 0 To samplesPerFactor - 1
+            Debug.Print "  sample"; sample; "value"; normals(factor * samplesPerFactor + sample)
+        Next sample
+    Next factor
 End Sub
