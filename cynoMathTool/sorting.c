@@ -21,20 +21,31 @@
 
 CYNOMATHUTILITY_API int __stdcall cyno_Sort(int* index1, double* x, int n)
 {
-
 	int i, ir, j, l, irra;
-	int m = n + 1;
-	int * index = (int*)malloc((size_t)m * sizeof(int));
-	if (index == NULL)
+	int m;
+	int* index;
+
+	if (index1 == NULL || x == NULL || n < 0) {
 		return -1;
+	}
+
+	if (n < 2) {
+		if (n == 1) {
+			index1[0] = 0;
+		}
+		return 0;
+	}
+
+	m = n + 1;
+	index = (int*)malloc((size_t)m * sizeof(int));
+	if (index == NULL) {
+		return -1;
+	}
 	
 	for (i = 1; i <= n; i++)
 	{
 		index[i] = i - 1;
 	}
-
-	if (n < 2)
-		return 0;
 
 	l = (int)(n / 2.0 + 1 + 0.5);
 	ir = n;
@@ -75,7 +86,7 @@ CYNOMATHUTILITY_API int __stdcall cyno_Sort(int* index1, double* x, int n)
 
 	}
 
-	for (int i = 0; i < n; i++) {
+	for (i = 0; i < n; i++) {
 		index1[i] = index[i + 1];
 	}
 
