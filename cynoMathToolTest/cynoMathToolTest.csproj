@@ -19,12 +19,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="$(NativeLibraryPath)" Link="cynoMathTools.dll" CopyToOutputDirectory="Always" Condition="'$(OS)' == 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
-    <None Include="$(NativeLibraryPath)" Link="libcynomath.so" CopyToOutputDirectory="Always" Condition="'$(OS)' != 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
+    <None Include="$(NativeLibraryPath)" Link="cynoMathTools.dll" Condition="'$(OS)' == 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
+    <None Include="$(NativeLibraryPath)" Link="libcynomath.so" Condition="'$(OS)' != 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
   </ItemGroup>
 
   <Target Name="BuildNativeLibrary" BeforeTargets="Build" Condition="'$(OS)' != 'Windows_NT'">
     <Exec Command="bash &quot;$(MSBuildProjectDirectory)/../build.sh&quot;" />
+  </Target>
+
+  <Target Name="CopyNativeLibraryAfterBuild" AfterTargets="Build" Condition="Exists('$(NativeLibraryPath)')">
+    <Copy SourceFiles="$(NativeLibraryPath)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="false" />
   </Target>
 
 </Project>

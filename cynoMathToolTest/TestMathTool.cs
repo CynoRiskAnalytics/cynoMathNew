@@ -34,6 +34,31 @@ namespace cynoMathToolTest
             return path;
         }
 
+        private static double[] BuildExpectedMultiEquityPaths(double[] spots, double[] dt, double[] drift, double[] dividend, double[] sigma, int nStocks, int nSteps, double[] correlatedNormals)
+        {
+            double[] paths = new double[nStocks * (nSteps + 1)];
+            for (int stock = 0; stock < nStocks; stock++)
+            {
+                paths[stock * (nSteps + 1)] = spots[stock];
+            }
+
+            for (int step = 0; step < nSteps; step++)
+            {
+                for (int stock = 0; stock < nStocks; stock++)
+                {
+                    int pathOffset = stock * (nSteps + 1);
+                    double sigmaStep = sigma[stock * nSteps + step];
+                    double variance = sigmaStep * sigmaStep;
+                    double z = correlatedNormals[step * nStocks + stock];
+                    double stepTerm = (drift[stock * nSteps + step] - dividend[stock * nSteps + step] - 0.5 * variance) * dt[step]
+                        + sigmaStep * Math.Sqrt(dt[step]) * z;
+                    paths[pathOffset + step + 1] = paths[pathOffset + step] * Math.Exp(stepTerm);
+                }
+            }
+
+            return paths;
+        }
+
         [TestMethod]
         public void NormalDistributionFunctionsMatchKnownValues()
         {
@@ -255,6 +280,59 @@ namespace cynoMathToolTest
             double[] sobolPath = new double[dt.Length + 1];
             Assert.IsTrue(cynoMathAPI.cyno_EquityPathSobolPlain(spot, dt, drift, dividend, sigma, dt.Length, sobolPath));
             Assert.IsTrue(sobolPath.All(x => x > 0.0 && !double.IsNaN(x) && !double.IsInfinity(x)));
+        }
+
+        [TestMethod]
+        public void MultiEquityPathGeneratorsUseCorrelationMatrix()
+        {
+            double[] spots = { 100.0, 80.0 };
+            double[] corr = {
+                1.0, 0.5,
+                0.5, 1.0
+            };
+            double[] dt = { 0.25, 0.5, 0.25 };
+            double[] drift = {
+                0.03, 0.04, 0.05,
+                0.02, 0.03, 0.04
+            };
+            double[] dividend = {
+                0.01, 0.015, 0.02,
+                0.005, 0.01, 0.015
+            };
+            double[] sigma = {
+                0.20, 0.25, 0.30,
+                0.15, 0.18, 0.22
+            };
+
+            double[] paths = new double[2 * (dt.Length + 1)];
+            cynoMathAPI.cyno_Rand_Seed(4242);
+            Assert.IsTrue(cynoMathAPI.cyno_EquityPathsPlain(spots, 2, corr, dt, drift, dividend, sigma, dt.Length, paths, 1));
+
+            cynoMathAPI.cyno_Rand_Seed(4242);
+            double[] correlatedNormals = new double[2 * dt.Length];
+            for (int step = 0; step < dt.Length; step++)
+            {
+                double[] z = new double[2];
+                Assert.IsTrue(cynoMathAPI.cyno_NormalRand1DArray(z, z.Length));
+                correlatedNormals[step * 2] = z[0];
+                correlatedNormals[step * 2 + 1] = 0.5 * z[0] + Math.Sqrt(0.75) * z[1];
+            }
+            double[] expectedPaths = BuildExpectedMultiEquityPaths(spots, dt, drift, dividend, sigma, 2, dt.Length, correlatedNormals);
+            CollectionAssert.AreEqual(expectedPaths, paths);
+
+            double[] antitheticPaths = new double[2 * (dt.Length + 1)];
+            double[] mirroredPaths = new double[2 * (dt.Length + 1)];
+            cynoMathAPI.cyno_Rand_Seed(5252);
+            Assert.IsTrue(cynoMathAPI.cyno_EquityPathsAntitheticPlain(spots, 2, corr, dt, drift, dividend, sigma, dt.Length, antitheticPaths, mirroredPaths, 1));
+            for (int stock = 0; stock < 2; stock++)
+            {
+                AssertAlmostEqual(spots[stock], antitheticPaths[stock * (dt.Length + 1)]);
+                AssertAlmostEqual(spots[stock], mirroredPaths[stock * (dt.Length + 1)]);
+            }
+
+            double[] sobolPaths = new double[2 * (dt.Length + 1)];
+            Assert.IsTrue(cynoMathAPI.cyno_EquityPathsSobolPlain(spots, 2, corr, dt, drift, dividend, sigma, dt.Length, sobolPaths));
+            Assert.IsTrue(sobolPaths.All(x => x > 0.0 && !double.IsNaN(x) && !double.IsInfinity(x)));
         }
 
         [TestMethod]
