@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <BaseOutputPath Condition="'$(OS)' == 'Windows_NT'">C:\Users\BinGu\source\repos\CynoMathTool\x64\</BaseOutputPath>
+    <NativeLibraryPath Condition="'$(OS)' != 'Windows_NT'">$(MSBuildProjectDirectory)/../build/libcynomath.so</NativeLibraryPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CodePorting.Native.Cs2Cpp.API" Version="22.5.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.8.3" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.8.3" />
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(NativeLibraryPath)" Link="libcynomath.so" CopyToOutputDirectory="PreserveNewest" Condition="'$(OS)' != 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
+  </ItemGroup>
+
+  <Target Name="BuildNativeLibrary" BeforeTargets="Build" Condition="'$(OS)' != 'Windows_NT'">
+    <Exec Command="cmake -S &quot;$(MSBuildProjectDirectory)/../cynoMathTool&quot; -B &quot;$(MSBuildProjectDirectory)/../build&quot;" />
+    <Exec Command="cmake --build &quot;$(MSBuildProjectDirectory)/../build&quot;" />
+  </Target>
+
+</Project>

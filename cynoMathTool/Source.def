@@ -1,0 +1,63 @@
+LIBRARY	"cynoMathTools"
+EXPORTS
+	cyno_Test
+
+	cyno_Sort
+	cyno_Root
+	cyno_lineSearch
+
+	cyno_StdNormCDF
+	cyno_NormCDF
+	cyno_StdNormDen
+	cyno_NormDen
+	cyno_StdNormInv
+	cyno_NormInv
+
+	cyno_BetaDen
+	cyno_BetaCDF
+	cyno_BetaInv
+
+	cyno_IntegrationFin
+	cyno_MatrixMultiply
+	cyno_MatrixMultiply_2
+	cyno_MatrixMultiply_3
+	cyno_InverseMatrix
+	cyno_MatrixTranspose
+	cyno_MatrixPower
+	cyno_CholeskyDecomp
+	cyno_EigenSystem
+	cyno_PDCorrMatrix
+	cyno_ApproximateCorrMatrix
+	cyno_LinearSystemSolver
+
+	cyno_Rand_Seed
+	cyno_Rand
+	cyno_RandMT_Seed
+	cyno_MTRand
+	cyno_NormRand
+	cyno_NormRandInv
+	cyno_CorrelatedNormalRand1DArray
+	cyno_Rand1DArray
+	cyno_NormalRand1DArray
+	cyno_CorrelatedNormalRand2DArray
+
+	cyno_Call
+	cyno_Put
+	cyno_BS
+	cyno_BS_Call
+	cyno_BS_Put
+	cyno_DigitalCall
+	cyno_DigitalPut
+
+	cyno_singleBarrier
+	cyno_oneTouch
+	cyno_hitProbabilityOneBarrier
+	cyno_oneNoTouch
+
+	cyno_doubleBarrier
+	cyno_doubleNoTouch
+	cyno_doubleOneTouch
+	cyno_hitProbabilityDoubleBarrier
+
+
+	
