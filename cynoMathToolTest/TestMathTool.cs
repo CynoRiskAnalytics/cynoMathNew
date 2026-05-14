@@ -20,6 +20,20 @@ namespace cynoMathToolTest
 
         private static double Square(double x) => x * x;
 
+        private static double[] BuildExpectedEquityPath(double spot, double[] dt, double[] drift, double[] dividend, double[] sigma, double[] normals)
+        {
+            double[] path = new double[normals.Length + 1];
+            path[0] = spot;
+            for (int i = 0; i < normals.Length; i++)
+            {
+                double variance = sigma[i] * sigma[i];
+                double step = (drift[i] - dividend[i] - 0.5 * variance) * dt[i]
+                    + sigma[i] * Math.Sqrt(dt[i]) * normals[i];
+                path[i + 1] = path[i] * Math.Exp(step);
+            }
+            return path;
+        }
+
         [TestMethod]
         public void NormalDistributionFunctionsMatchKnownValues()
         {
@@ -200,6 +214,47 @@ namespace cynoMathToolTest
                 Assert.IsFalse(double.IsInfinity(sample));
                 Assert.IsTrue(inverseSample > -10.0 && inverseSample < 10.0);
             }
+        }
+
+        [TestMethod]
+        public void EquityPathGeneratorsUseStepSpecificInputs()
+        {
+            const double spot = 100.0;
+            double[] dt = { 0.25, 0.5, 0.25 };
+            double[] drift = { 0.03, 0.04, 0.05 };
+            double[] dividend = { 0.01, 0.015, 0.02 };
+            double[] sigma = { 0.20, 0.25, 0.30 };
+
+            cynoMathAPI.cyno_Rand_Seed(24680);
+            double[] path = new double[dt.Length + 1];
+            Assert.IsTrue(cynoMathAPI.cyno_EquityPathPlain(spot, dt, drift, dividend, sigma, dt.Length, path, 1));
+
+            cynoMathAPI.cyno_Rand_Seed(24680);
+            double[] normals = new double[dt.Length];
+            Assert.IsTrue(cynoMathAPI.cyno_NormalRand1DArray(normals, normals.Length));
+            double[] expected = BuildExpectedEquityPath(spot, dt, drift, dividend, sigma, normals);
+            CollectionAssert.AreEqual(expected, path);
+
+            cynoMathAPI.cyno_Rand_Seed(13579);
+            double[] antitheticPath = new double[dt.Length + 1];
+            double[] mirroredPath = new double[dt.Length + 1];
+            Assert.IsTrue(cynoMathAPI.cyno_EquityPathAntitheticPlain(spot, dt, drift, dividend, sigma, dt.Length, antitheticPath, mirroredPath, 1));
+
+            cynoMathAPI.cyno_Rand_Seed(13579);
+            double[] antitheticNormals = new double[dt.Length];
+            Assert.IsTrue(cynoMathAPI.cyno_NormalRand1DArray(normals, normals.Length));
+            for (int i = 0; i < dt.Length; i++)
+            {
+                antitheticNormals[i] = -normals[i];
+            }
+            double[] expectedAntithetic = BuildExpectedEquityPath(spot, dt, drift, dividend, sigma, normals);
+            double[] expectedMirrored = BuildExpectedEquityPath(spot, dt, drift, dividend, sigma, antitheticNormals);
+            CollectionAssert.AreEqual(expectedAntithetic, antitheticPath);
+            CollectionAssert.AreEqual(expectedMirrored, mirroredPath);
+
+            double[] sobolPath = new double[dt.Length + 1];
+            Assert.IsTrue(cynoMathAPI.cyno_EquityPathSobolPlain(spot, dt, drift, dividend, sigma, dt.Length, sobolPath));
+            Assert.IsTrue(sobolPath.All(x => x > 0.0 && !double.IsNaN(x) && !double.IsInfinity(x)));
         }
 
         [TestMethod]

@@ -19,13 +19,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="$(NativeLibraryPath)" Link="cynoMathTools.dll" CopyToOutputDirectory="PreserveNewest" Condition="'$(OS)' == 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
-    <None Include="$(NativeLibraryPath)" Link="libcynomath.so" CopyToOutputDirectory="PreserveNewest" Condition="'$(OS)' != 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
+    <None Include="$(NativeLibraryPath)" Link="cynoMathTools.dll" CopyToOutputDirectory="Always" Condition="'$(OS)' == 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
+    <None Include="$(NativeLibraryPath)" Link="libcynomath.so" CopyToOutputDirectory="Always" Condition="'$(OS)' != 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
   </ItemGroup>
 
   <Target Name="BuildNativeLibrary" BeforeTargets="Build" Condition="'$(OS)' != 'Windows_NT'">
-    <Exec Command="cmake -S &quot;$(MSBuildProjectDirectory)/../cynoMathTool&quot; -B &quot;$(MSBuildProjectDirectory)/../build&quot;" />
-    <Exec Command="cmake --build &quot;$(MSBuildProjectDirectory)/../build&quot;" />
+    <Exec Command="bash &quot;$(MSBuildProjectDirectory)/../build.sh&quot;" />
   </Target>
 
 </Project>

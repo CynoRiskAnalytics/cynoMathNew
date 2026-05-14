@@ -20,6 +20,8 @@ typedef struct Rand2 {
 } Rand2;
 
 static Rand2* p = NULL;
+static short g_normRandHasSpare = 0;
+static double g_normRandSpare = 0.0;
 
 static Ullong rand2_int64(Rand2* state) {
 	state->v ^= state->v >> 17;
@@ -94,6 +96,7 @@ static void fill_uniform_vector_antithetic(double* outArray, long size) {
 }
 
 
+
 //Purpose
 //		Set random number generator cyno_Rand() seed.
 //Parameters
@@ -106,6 +109,8 @@ CYNOMATHUTILITY_API void __stdcall cyno_Rand_Seed(long seed) {
 
 	free(p);
 	p = (Rand2*)malloc(sizeof(Rand2));
+	g_normRandHasSpare = 0;
+	g_normRandSpare = 0.0;
 	if (p != NULL) {
 		rand2_seed(p, (Ullong)seed);
 	}
@@ -166,14 +171,10 @@ CYNOMATHUTILITY_API double __stdcall cyno_MTRand(void) {
 
 
 CYNOMATHUTILITY_API double __stdcall cyno_NormRand(void) {
-
-
-	static short iSet = 0;
-	static double gset;
 	double fac, rsq, v1, v2;
 
 
-	if (iSet == 0) {
+	if (g_normRandHasSpare == 0) {
 
 		do {
 			v1 = (double)2 * cyno_Rand() - (double)1;
@@ -181,14 +182,14 @@ CYNOMATHUTILITY_API double __stdcall cyno_NormRand(void) {
 			rsq = v1 * v1 + v2 * v2;
 		} while (rsq >= (double)1 || rsq == (double)0);
 		fac = sqrt((double)-2 * log(rsq) / rsq);
-		gset = v1 * fac;
-		iSet = 1;
+		g_normRandSpare = v1 * fac;
+		g_normRandHasSpare = 1;
 
 		return v2 * fac;
 	}
 	else {
-		iSet = 0;
-		return gset;
+		g_normRandHasSpare = 0;
+		return g_normRandSpare;
 	}
 }
 
@@ -488,6 +489,7 @@ CYNOMATHUTILITY_API bool __stdcall cyno_Rand1DArrayPlainAntithetic(double* outAr
 	fill_uniform_vector_antithetic(outArray, size);
 	return true;
 }
+
 
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand1DArrayPlain(const double* correlationMatrix, long dim, double* outArray, short randflag) {
 	double* randomVector;

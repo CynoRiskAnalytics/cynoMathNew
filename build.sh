@@ -21,6 +21,7 @@ gcc -shared -fPIC -O2 \
   "$SRC_DIR/Integration_fin.c" \
   "$SRC_DIR/MTRandomNumber.c" \
   "$SRC_DIR/cynoMathUtility.c" \
+  "$SRC_DIR/equityPath.c" \
   "$SRC_DIR/integration_GH.c" \
   "$SRC_DIR/integration_GL.c" \
   "$SRC_DIR/matrix.c" \

@@ -101,6 +101,15 @@ namespace cynoFinTool.Numerics
         public static extern bool cyno_SobolNormal2DArrayPlain([Out] double[] outArray, long dim, long samplesPerFactor);
 
         [DllImport(NativeLibraryName)]
+        public static extern bool cyno_EquityPathPlain(double spot, [In] double[] dt, [In] double[] drift, [In] double[] dividend, [In] double[] sigma, long nSteps, [Out] double[] outPath, short randflag);
+
+        [DllImport(NativeLibraryName)]
+        public static extern bool cyno_EquityPathAntitheticPlain(double spot, [In] double[] dt, [In] double[] drift, [In] double[] dividend, [In] double[] sigma, long nSteps, [Out] double[] outPath, [Out] double[] antitheticOutPath, short randflag);
+
+        [DllImport(NativeLibraryName)]
+        public static extern bool cyno_EquityPathSobolPlain(double spot, [In] double[] dt, [In] double[] drift, [In] double[] dividend, [In] double[] sigma, long nSteps, [Out] double[] outPath);
+
+        [DllImport(NativeLibraryName)]
         public static extern bool cyno_CorrelatedNormalRand1DArrayPlain([In] double[] correlationMatrix, long dim, [Out] double[] outArray, short randflag);
 
         [DllImport(NativeLibraryName)]

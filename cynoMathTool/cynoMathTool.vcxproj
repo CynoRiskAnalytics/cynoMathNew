@@ -161,6 +161,7 @@
   <ItemGroup>
     <ClInclude Include="BlackScholes.h" />
     <ClInclude Include="BlackScholesDoubleBarrier.h" />
+    <ClInclude Include="equityPath.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="matrix.h" />
     <ClInclude Include="MTRandomNumber.h" />
@@ -172,6 +173,7 @@
   <ItemGroup>
     <ClCompile Include="BlackScholes.c" />
     <ClCompile Include="BlackSholesDoubleBarrier.c" />
+    <ClCompile Include="equityPath.c" />
     <ClCompile Include="Integration_fin.c" />
     <ClCompile Include="integration_GH.c" />
     <ClCompile Include="integration_GL.c" />

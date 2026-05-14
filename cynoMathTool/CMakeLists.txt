@@ -7,6 +7,7 @@ set(CYNOMATH_SOURCES
     BlackScholesBarrierOption.c
     BlackSholesDoubleBarrier.c
     cynoMathUtility.c
+    equityPath.c
     Integration_fin.c
     integration_GH.c
     integration_GL.c

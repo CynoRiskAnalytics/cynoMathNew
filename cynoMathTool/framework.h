@@ -151,6 +151,7 @@ CYNOMATHUTILITY_API bool __stdcall cyno_Sobol1DArrayPlain(double* outArray, long
 CYNOMATHUTILITY_API bool __stdcall cyno_SobolNormal1DArrayPlain(double* outArray, long size);
 CYNOMATHUTILITY_API bool __stdcall cyno_Sobol2DArrayPlain(double* outArray, long dim, long samplesPerFactor);
 CYNOMATHUTILITY_API bool __stdcall cyno_SobolNormal2DArrayPlain(double* outArray, long dim, long samplesPerFactor);
+#include "equityPath.h"
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand1DArrayPlain(const double* correlationMatrix, long dim, double* outArray, short randflag);
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand2DArrayPlain(const double* correlationMatrix, long dim, double* outArray, long samplesPerFactor, short randflag);
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand1DArrayPlainAntithetic(const double* correlationMatrix, long dim, double* outArray, double* antitheticOutArray, short randflag);
