@@ -7,11 +7,14 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <NativeLibraryPath Condition="'$(OS)' == 'Windows_NT'">$(MSBuildProjectDirectory)\..\x64\$(Configuration)\cynoMathTools.dll</NativeLibraryPath>
+    <BaseOutputPath Condition="'$(OS)' == 'Windows_NT'">C:\Users\BinGu\source\repos\CynoMathTool\x64\</BaseOutputPath>
     <NativeLibraryPath Condition="'$(OS)' != 'Windows_NT'">$(MSBuildProjectDirectory)/../build/libcynomath.so</NativeLibraryPath>
+    <SystemCMakePath Condition="'$(OS)' != 'Windows_NT' and Exists('/usr/bin/cmake')">/usr/bin/cmake</SystemCMakePath>
+    <SystemCMakePath Condition="'$(OS)' != 'Windows_NT' and '$(SystemCMakePath)' == '' and Exists('/usr/local/bin/cmake')">/usr/local/bin/cmake</SystemCMakePath>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CodePorting.Native.Cs2Cpp.API" Version="22.5.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.8.3" />
     <PackageReference Include="MSTest.TestFramework" Version="3.8.3" />
@@ -19,16 +22,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="$(NativeLibraryPath)" Link="cynoMathTools.dll" Condition="'$(OS)' == 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
-    <None Include="$(NativeLibraryPath)" Link="libcynomath.so" Condition="'$(OS)' != 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
+    <None Include="$(NativeLibraryPath)" Link="libcynomath.so" CopyToOutputDirectory="PreserveNewest" Condition="'$(OS)' != 'Windows_NT' and Exists('$(NativeLibraryPath)')" />
   </ItemGroup>
 
-  <Target Name="BuildNativeLibrary" BeforeTargets="Build" Condition="'$(OS)' != 'Windows_NT'">
-    <Exec Command="bash &quot;$(MSBuildProjectDirectory)/../build.sh&quot;" />
+  <Target Name="BuildNativeLibrary" BeforeTargets="Build" Condition="'$(OS)' != 'Windows_NT' and !Exists('$(NativeLibraryPath)') and '$(SystemCMakePath)' != ''">
+    <Exec Command="&quot;$(SystemCMakePath)&quot; -S &quot;$(MSBuildProjectDirectory)/../cynoMathTool&quot; -B &quot;$(MSBuildProjectDirectory)/../build&quot;" />
+    <Exec Command="&quot;$(SystemCMakePath)&quot; --build &quot;$(MSBuildProjectDirectory)/../build&quot;" />
   </Target>
 
-  <Target Name="CopyNativeLibraryAfterBuild" AfterTargets="Build" Condition="Exists('$(NativeLibraryPath)')">
-    <Copy SourceFiles="$(NativeLibraryPath)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="false" />
+  <Target Name="ValidateNativeLibraryAvailability" BeforeTargets="Build" Condition="'$(OS)' != 'Windows_NT' and !Exists('$(NativeLibraryPath)') and '$(SystemCMakePath)' == ''">
+    <Error Text="Native library not found at $(NativeLibraryPath), and cmake is not installed at /usr/bin/cmake or /usr/local/bin/cmake." />
   </Target>
 
 </Project>

@@ -15,6 +15,12 @@ internal static class CynoMathApi
     internal static extern bool cyno_Rand1DArrayPlain([Out] double[] output, long size);
 
     [DllImport(NativeLibraryName)]
+    internal static extern bool cyno_Sobol2DArrayPlain([Out] double[] output, long dim, long samplesPerFactor);
+
+    [DllImport(NativeLibraryName)]
+    internal static extern bool cyno_CorrelatedNormalRand2DArrayPlain([In] double[] correlationMatrix, long dim, [Out] double[] output, long samplesPerFactor, short randflag);
+
+    [DllImport(NativeLibraryName)]
     internal static extern bool cyno_Sobol1DArrayPlain([Out] double[] output, long size);
 
     [DllImport(NativeLibraryName)]
@@ -41,6 +47,24 @@ internal static class Program
         {
             Console.WriteLine($"uniform[{i}] = {uniforms[i]:F10}");
         }
+
+        double[,] corrMatrix2D =
+        {
+            { 1.0, 0.4 },
+            { 0.4, 1.0 }
+        };
+        double[] corr = FlattenMatrix(corrMatrix2D);
+
+        double[] sobol2DFlat = new double[2 * 4];
+        bool sobol2DOk = CynoMathApi.cyno_Sobol2DArrayPlain(sobol2DFlat, 2, 4);
+        Console.WriteLine($"Sobol 2D fill ok: {sobol2DOk}");
+        PrintMatrix("Sobol 2D uniforms", ToMatrix(sobol2DFlat, 2, 4));
+
+        double[] correlated2DFlat = new double[2 * 4];
+        bool correlated2DOk = CynoMathApi.cyno_CorrelatedNormalRand2DArrayPlain(corr, 2, correlated2DFlat, 4, 1);
+        Console.WriteLine($"Correlated normal 2D fill ok: {correlated2DOk}");
+        PrintMatrix("Correlation matrix loaded into C", corrMatrix2D);
+        PrintMatrix("Correlated normal 2D", ToMatrix(correlated2DFlat, 2, 4));
 
         double[] sobol = new double[8];
         bool sobolOk = CynoMathApi.cyno_Sobol1DArrayPlain(sobol, sobol.Length);
@@ -74,5 +98,54 @@ internal static class Program
         Console.WriteLine($"Matrix multiply ok: {matrixOk}");
         Console.WriteLine($"[{product[0]:F1} {product[1]:F1}]");
         Console.WriteLine($"[{product[2]:F1} {product[3]:F1}]");
+    }
+
+    private static double[] FlattenMatrix(double[,] matrix)
+    {
+        int rows = matrix.GetLength(0);
+        int cols = matrix.GetLength(1);
+        double[] flat = new double[rows * cols];
+
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < cols; col++)
+            {
+                flat[row * cols + col] = matrix[row, col];
+            }
+        }
+
+        return flat;
+    }
+
+    private static double[,] ToMatrix(double[] flat, int rows, int cols)
+    {
+        double[,] matrix = new double[rows, cols];
+
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < cols; col++)
+            {
+                matrix[row, col] = flat[row * cols + col];
+            }
+        }
+
+        return matrix;
+    }
+
+    private static void PrintMatrix(string title, double[,] matrix)
+    {
+        Console.WriteLine(title);
+        int rows = matrix.GetLength(0);
+        int cols = matrix.GetLength(1);
+
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < cols; col++)
+            {
+                Console.Write($"{matrix[row, col]:F10} ");
+            }
+
+            Console.WriteLine();
+        }
     }
 }

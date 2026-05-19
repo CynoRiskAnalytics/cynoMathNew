@@ -101,24 +101,6 @@ namespace cynoFinTool.Numerics
         public static extern bool cyno_SobolNormal2DArrayPlain([Out] double[] outArray, long dim, long samplesPerFactor);
 
         [DllImport(NativeLibraryName)]
-        public static extern bool cyno_EquityPathPlain(double spot, [In] double[] dt, [In] double[] drift, [In] double[] dividend, [In] double[] sigma, long nSteps, [Out] double[] outPath, short randflag);
-
-        [DllImport(NativeLibraryName)]
-        public static extern bool cyno_EquityPathAntitheticPlain(double spot, [In] double[] dt, [In] double[] drift, [In] double[] dividend, [In] double[] sigma, long nSteps, [Out] double[] outPath, [Out] double[] antitheticOutPath, short randflag);
-
-        [DllImport(NativeLibraryName)]
-        public static extern bool cyno_EquityPathSobolPlain(double spot, [In] double[] dt, [In] double[] drift, [In] double[] dividend, [In] double[] sigma, long nSteps, [Out] double[] outPath);
-
-        [DllImport(NativeLibraryName)]
-        public static extern bool cyno_EquityPathsPlain([In] double[] spots, long nStocks, [In] double[] correlationMatrix, [In] double[] dt, [In] double[] drift, [In] double[] dividend, [In] double[] sigma, long nSteps, [Out] double[] outPaths, short randflag);
-
-        [DllImport(NativeLibraryName)]
-        public static extern bool cyno_EquityPathsAntitheticPlain([In] double[] spots, long nStocks, [In] double[] correlationMatrix, [In] double[] dt, [In] double[] drift, [In] double[] dividend, [In] double[] sigma, long nSteps, [Out] double[] outPaths, [Out] double[] antitheticOutPaths, short randflag);
-
-        [DllImport(NativeLibraryName)]
-        public static extern bool cyno_EquityPathsSobolPlain([In] double[] spots, long nStocks, [In] double[] correlationMatrix, [In] double[] dt, [In] double[] drift, [In] double[] dividend, [In] double[] sigma, long nSteps, [Out] double[] outPaths);
-
-        [DllImport(NativeLibraryName)]
         public static extern bool cyno_CorrelatedNormalRand1DArrayPlain([In] double[] correlationMatrix, long dim, [Out] double[] outArray, short randflag);
 
         [DllImport(NativeLibraryName)]
