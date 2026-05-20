@@ -56,338 +56,23 @@ static void cyno_free_matrix(double** matrix) {
 }
 
 static void cyno_copy_flat_to_matrix(const double* input, long rows, long cols, double** matrix) {
-	long i, j;
-
-	for (i = 0; i < rows; i++) {
-		for (j = 0; j < cols; j++) {
-			matrix[i][j] = input[i * cols + j];
-		}
-	}
+	memcpy(matrix[0], input, (size_t)(rows * cols) * sizeof(double));
 }
 
 static void cyno_copy_matrix_to_flat(double** matrix, long rows, long cols, double* output) {
-	long i, j;
-
-	for (i = 0; i < rows; i++) {
-		for (j = 0; j < cols; j++) {
-			output[i * cols + j] = matrix[i][j];
-		}
-	}
+	memcpy(output, matrix[0], (size_t)(rows * cols) * sizeof(double));
 }
 
 bool _stdcall cyno_DiagonalMatrixMultiply(long matrixOneDim, double* matrixOne, long matrixTwoDim1, long matrixTwoDim2, double** matrixTwo);
 bool _stdcall cyno_DiagonalMatrixMultiplyMatrixVector(long matrixOneDim1, long matrixOneDim2, double** matrixOne, long matrixTwoDim, double* matrixTwo);
-bool UnbalanceVectors(long vMatrixDim1, long vMatrixDim2, double** vMatrix, long transDim, double* trans, short bL, short bH, bool isLeft);
-bool BalanceMatrix(long theMatrixDim1, long theMatrixDim2, double** theMatrix, long transDim, double* trans, short* bL, short* bH);
-bool Hessenberg(long aMatrixDim1, long aMatrixDim2, double** aMatrix, long transDim, double* trans, long zMatrixDim1, long zMatrixDim2, double** zMatrix, short bL, short bH, bool eigvects);
-bool HessEigenSystem(long hMatrixDim1, long hMatrixDim2, double** hMatrix, long zMatrixDim1, long zMatrixDim2, double** zMatrix, long wrDim, double* wr, long wiDim, double* wi, short bL, short bH, bool eigvects);
-
-// It's caller's responsibility to resize output matrix properly save processing time
-// and avoid potential memory leaking
-// Right most dimension in SAFEARRAY is stored first in array element area.
-// For example, in VBA
-// Dim A(1 to 2, 1 to 3) as double
-// The order of elements in SAFEARRAY element area is
-// (1,1), (2,1), (1,2), (2, 2), (1,3), (2,3)
-
-//Purpose
-//		Multiply a scalar value to a one dimension or two dimension matrix
-//Parameters
-//		a			input	scalar value
-//		b			input	1D/2D matrix
-//		c			output	1D/2D result matrix
-//Return Values
-//		bool
-//Remarks
-//		Arrays b and c must be sized properly and in same size before call this function.
-
-CYNOMATHUTILITY_API bool _stdcall cyno_MatrixMultiply(double a, SAFEARRAY** b, SAFEARRAY** c) {
-	HRESULT lResult; // return code for OLE functions
-
-	double* pArrayElements_b, * pArrayElements_c; // pointer to the elements of the array
-	long i, j;
-
-	bool ret;
-
-	long D1Elements, D2Elements;
-
-
-	pArrayElements_b = (double*)(*b)->pvData;
-	pArrayElements_c = (double*)(*c)->pvData;
-
-	D1Elements = (*b)->rgsabound[0].cElements;
-	D2Elements = (*b)->rgsabound[1].cElements;
-
-
-	lResult = SafeArrayLock(*b);
-	if (lResult) return false;
-	lResult = SafeArrayLock(*c);
-	if (lResult) return false;
-
-	if ((*b)->cDims == 1) {
-
-		for (i = 0; i < D1Elements; i++)
-			pArrayElements_c[i] = a * pArrayElements_b[i];
-		ret = true;
-	}
-	else if ((*b)->cDims == 2) {
-		for (i = 0; i < D1Elements; i++)
-			for (j = 0; j < D2Elements; j++) {
-				pArrayElements_c[i * D1Elements + j] = a * pArrayElements_b[i * D1Elements + j];
-			}
-		ret = true;
-	}
-	else
-		ret = false;
-	lResult = SafeArrayUnlock(*b);
-	if (lResult) return false;
-	lResult = SafeArrayUnlock(*c);
-	if (lResult) return false;
-	return ret;
-}
-
-//Purpose
-//		Multiply one or two dimension matrix to another one dimension or two dimension matrix
-//Parameters
-//		a			input	1D/2D matrix
-//		b			input	1D/2D matrix
-//		c			output	1D/2D result matrix
-//Return Values
-//		bool
-//Remarks
-//		Arrays a, b, c must be sized properly. Array a and b must multiplyable.
-
-CYNOMATHUTILITY_API bool _stdcall cyno_MatrixMultiply_2(SAFEARRAY** a, SAFEARRAY** b, SAFEARRAY** c) {
-	HRESULT lResult; 
-	double* pArrayElements_a, * pArrayElements_b, * pArrayElements_c; // pointer to the elements of the array
-
-	bool ret = false;
-
-	int aD1Elements, aD2Elements;
-	int bD1Elements, bD2Elements;
-
-	int D1, D2, i, j, k;
-	double tmp;
-
-
-
-	D1 = (*a)->cDims;
-	D2 = (*b)->cDims;
-
-	pArrayElements_a = (double*)(*a)->pvData;
-	pArrayElements_b = (double*)(*b)->pvData;
-	pArrayElements_c = (double*)(*c)->pvData;
-
-	aD1Elements = (*a)->rgsabound[0].cElements;
-	bD1Elements = (*b)->rgsabound[0].cElements;
-
-	lResult = SafeArrayLock(*a);
-	if (lResult) return false;
-	lResult = SafeArrayLock(*b);
-	if (lResult) return false;
-	lResult = SafeArrayLock(*c);
-	if (lResult) return false;
-
-
-
-	if (D1 == 2 && D2 == 1) {
-		aD2Elements = (*a)->rgsabound[1].cElements;
-
-		if (aD1Elements == bD1Elements) {
-			for (i = 0; i < aD2Elements; i++) { //row
-				tmp = 0;
-				for (k = 0; k < aD1Elements; k++) //column
-					tmp = tmp + pArrayElements_a[i + k * aD2Elements] * pArrayElements_b[k];
-				pArrayElements_c[i] = tmp;
-			}
-			ret = true;
-		}
-	}
-	else if (D1 == 1 && D2 == 2) {
-		bD2Elements = (*b)->rgsabound[1].cElements;
-		if (aD1Elements == bD2Elements) {
-			for (i = 0; i < bD1Elements; i++) {
-				tmp = 0;
-				for (k = 0; k < aD1Elements; k++)
-					//tmp = tmp + A(k) * b(k, i)
-					tmp = tmp + pArrayElements_a[k] * pArrayElements_b[i * bD2Elements + k];
-				pArrayElements_c[i] = tmp;
-			}
-			ret = true;
-		}
-	}
-	else if (D1 == 2 && D2 == 2) {
-		aD2Elements = (*a)->rgsabound[1].cElements;
-		bD2Elements = (*b)->rgsabound[1].cElements;
-		if (aD1Elements == bD2Elements) {
-			for (i = 0; i < aD2Elements; i++)
-				for (j = 0; j < bD1Elements; j++) {
-					tmp = 0;
-					for (k = 0; k < aD1Elements; k++) {
-						//tmp = tmp + A(i,k) * b(k,j)
-						tmp = tmp + pArrayElements_a[k * aD2Elements + i] * pArrayElements_b[j * bD2Elements + k];
-						
-					}
-					pArrayElements_c[j * aD2Elements + i] = tmp;
-				}
-			ret = true;
-		}
-	}
-
-	lResult = SafeArrayUnlock(*a);
-	if (lResult) return false;
-	lResult = SafeArrayUnlock(*b);
-	if (lResult) return false;
-	lResult = SafeArrayUnlock(*c);
-	if (lResult) return false;
-
-	return ret;
-}
-
-//Purpose
-//		Multiply one dimension matrix to another one dimension matrix
-//Parameters
-//		a			input	1D matrix
-//		b			input	1D matrix
-//		c			output	scalar result
-//Return Values
-//		bool
-//Remarks
-//		Arrays a, b must be sized properly and in same size.
-
-CYNOMATHUTILITY_API bool _stdcall cyno_MatrixMultiply_3(SAFEARRAY** a, SAFEARRAY** b, double* c) {
-	HRESULT lResult; 
-	double* pArrayElements_a, * pArrayElements_b; // pointer to the elements of the array
-
-	bool ret = false;
-
-	long aD1Elements;
-	long bD1Elements;
-
-	long D1, D2, i;
-	double tmp;
-
-
-	D1 = (*a)->cDims;
-	D2 = (*b)->cDims;
-
-	pArrayElements_a = (double*)(*a)->pvData;
-	pArrayElements_b = (double*)(*b)->pvData;
-
-	aD1Elements = (*a)->rgsabound[0].cElements;
-	bD1Elements = (*b)->rgsabound[0].cElements;
-
-	lResult = SafeArrayLock(*a);
-	if (lResult) return false;
-	lResult = SafeArrayLock(*b);
-	if (lResult) return false;
-
-	if (D1 == 1 && D2 == 1) {
-		if (aD1Elements == bD1Elements) {
-			tmp = 0;
-			for (i = 0; i < aD1Elements; i++)
-				tmp = tmp + pArrayElements_a[i] * pArrayElements_b[i];
-			*c = tmp;
-			ret = true;
-		}
-	}
-
-	lResult = SafeArrayUnlock(*a);
-	if (lResult) return false;
-	lResult = SafeArrayUnlock(*b);
-	if (lResult) return false;
-
-	return ret;
-}
+bool UnbalanceVectors(long vMatrixDim1, long vMatrixDim2, double** vMatrix, long transDim, double* trans, long bL, long bH, bool isLeft);
+bool BalanceMatrix(long theMatrixDim1, long theMatrixDim2, double** theMatrix, long transDim, double* trans, long* bL, long* bH);
+bool Hessenberg(long aMatrixDim1, long aMatrixDim2, double** aMatrix, long transDim, double* trans, long zMatrixDim1, long zMatrixDim2, double** zMatrix, long bL, long bH, bool eigvects);
+bool HessEigenSystem(long hMatrixDim1, long hMatrixDim2, double** hMatrix, long zMatrixDim1, long zMatrixDim2, double** zMatrix, long wrDim, double* wr, long wiDim, double* wi, long bL, long bH, bool eigvects);
 
 // ==========================
 // Internal matrix functions
 // ==========================
-bool cyno_ConvertFromSafeArray1D(SAFEARRAY** a, long dim, double* pa) {
-	HRESULT lResult; // return code for OLE functions
-	double* pArrayElements_a; // pointer to the elements of the array
-
-	long i;
-
-	pArrayElements_a = (double*)(*a)->pvData;
-
-	lResult = SafeArrayLock(*a);
-	if (lResult) return false;
-
-	for (i = 0; i < dim; i++)
-		pa[i] = pArrayElements_a[i];
-
-	lResult = SafeArrayUnlock(*a);
-	if (lResult) return false;
-
-	return true;
-}
-
-bool cyno_ConvertFromSafeArray2D(SAFEARRAY** a, long dim1, long dim2, double** pa) {
-	HRESULT lResult; // return code for OLE functions
-	double* pArrayElements_a; // pointer to the elements of the array
-
-	long i, j;
-
-	pArrayElements_a = (double*)(*a)->pvData;
-
-	lResult = SafeArrayLock(*a);
-	if (lResult) return false;
-
-	for (i = 0; i < dim1; i++)
-	{
-		for (j = 0; j < dim2; j++)
-			pa[i][j] = pArrayElements_a[i + j * dim1];
-	}
-
-	lResult = SafeArrayUnlock(*a);
-	if (lResult) return false;
-	return true;
-}
-
-bool cyno_ConvertToSafeArray1D(SAFEARRAY** a, long dim, double* pa) {
-	HRESULT lResult; // return code for OLE functions
-	double* pArrayElements_a; // pointer to the elements of the array
-
-	long i;
-
-	pArrayElements_a = (double*)(*a)->pvData;
-
-	lResult = SafeArrayLock(*a);
-	if (lResult) return false;
-
-	for (i = 0; i < dim; i++)
-		pArrayElements_a[i] = pa[i];
-
-	lResult = SafeArrayUnlock(*a);
-	if (lResult) return false;
-
-	return true;
-}
-
-bool cyno_ConvertToSafeArray2D(SAFEARRAY** a, long dim1, long dim2, double** pa) {
-	HRESULT lResult; // return code for OLE functions
-	double* pArrayElements_a; // pointer to the elements of the array
-
-	long i, j;
-
-	pArrayElements_a = (double*)(*a)->pvData;
-
-	lResult = SafeArrayLock(*a);
-	if (lResult) return false;
-
-	for (i = 0; i < dim1; i++)
-	{
-		for (j = 0; j < dim2; j++)
-			pArrayElements_a[i + j * dim1] = pa[i][j];
-	}
-
-	lResult = SafeArrayUnlock(*a);
-	if (lResult) return false;
-	return true;
-}
-
-
 void _stdcall cyno_MatrixMultiScalar1D(double a, long dim, double* b, double* c) {
 
 	long i;
@@ -511,7 +196,7 @@ bool _stdcall cyno_DiagonalMatrixMultiplyMatrixVector(long matrixOneDim1, long m
 }
 
 bool _stdcall cyno_LUDecomp(long aMatrixDim1, long aMatrixDim2, double** aMatrix, long* pVec, short* d) {
-	short i, IMax, j, k;
+	long i, IMax, j, k;
 	double BIG, dum, sum, temp;
 	double* vv;
 
@@ -687,47 +372,6 @@ CYNOMATHUTILITY_API bool _stdcall cyno_InverseMatrix(long dim1, long dim2, doubl
 //		Arrays psaInMatrix and psaOutMatrix must be 2 dimension matrix
 //		and must be sized properly before call this function.
 //
-CYNOMATHUTILITY_API bool _stdcall cyno_MatrixTranspose(SAFEARRAY** psaInMatrix, SAFEARRAY** psaOutMatrix) {
-	short i;
-	long indim1, indim2, outdim1, outdim2;
-	double** pInMatrix, ** pOutMatrix;
-	bool ret;
-
-	if ((*psaInMatrix)->cDims == 2) {
-
-		indim1 = (*psaInMatrix)->rgsabound[1].cElements;
-		indim2 = (*psaInMatrix)->rgsabound[0].cElements;
-
-		outdim1 = (*psaOutMatrix)->rgsabound[1].cElements;
-		outdim2 = (*psaOutMatrix)->rgsabound[0].cElements;
-
-		if (indim1 != outdim2 || indim2 != outdim1)
-			return false;
-
-		// Allocate memory
-		pInMatrix = cyno_alloc_matrix(indim1, indim2);
-		pOutMatrix = cyno_alloc_matrix(outdim1, outdim2);
-		if (pInMatrix == NULL || pOutMatrix == NULL) {
-			cyno_free_matrix(pInMatrix);
-			cyno_free_matrix(pOutMatrix);
-			return false;
-		}
-
-		ret = cyno_ConvertFromSafeArray2D(psaInMatrix, indim1, indim2, pInMatrix);
-
-		cyno_MatrixTrans(indim1, indim2, pInMatrix, pOutMatrix);
-
-		ret = cyno_ConvertToSafeArray2D(psaOutMatrix, outdim1, outdim2, pOutMatrix);
-
-		// De-Allocate memory to prevent memory leak
-		cyno_free_matrix(pInMatrix);
-		cyno_free_matrix(pOutMatrix);
-
-		return ret;
-	}
-	return false;
-}
-
 //Purpose
 //		Matrix Power - matrix^{n}
 //Parameters
@@ -739,70 +383,6 @@ CYNOMATHUTILITY_API bool _stdcall cyno_MatrixTranspose(SAFEARRAY** psaInMatrix, 
 //		Array psaInMatrix must be 2 dimension square matrix.
 //		The result will be returned through array psaInMatrix.
 
-CYNOMATHUTILITY_API bool _stdcall cyno_MatrixPower(SAFEARRAY** psaInMatrix, short thePower) {
-	short i, j, rPow;
-	long indim1, indim2, outdim1, outdim2;
-	double** pInMatrix, ** pTmpMatrix, ** pOutMatrix;
-	bool ret;
-
-
-	ret = false;
-
-	if ((*psaInMatrix)->cDims == 2) {
-		indim1 = (*psaInMatrix)->rgsabound[1].cElements;
-		indim2 = (*psaInMatrix)->rgsabound[0].cElements;
-
-		outdim1 = indim1;
-		outdim2 = indim2;
-
-		if (indim1 != indim2)
-			return false;
-
-		// Allocate memory
-		pInMatrix = cyno_alloc_matrix(indim1, indim2);
-		pTmpMatrix = cyno_alloc_matrix(indim1, indim2);
-		pOutMatrix = cyno_alloc_matrix(outdim1, outdim2);
-		if (pInMatrix == NULL || pTmpMatrix == NULL || pOutMatrix == NULL) {
-			cyno_free_matrix(pInMatrix);
-			cyno_free_matrix(pTmpMatrix);
-			cyno_free_matrix(pOutMatrix);
-			return false;
-		}
-
-
-		ret = cyno_ConvertFromSafeArray2D(psaInMatrix, indim1, indim2, pInMatrix);
-
-
-		if (ret) {
-			// copy InMatrix to TmpMatrix
-			for (i = 0; i < indim1; i++)
-				for (j = 0; j < indim2; j++)
-					pTmpMatrix[i][j] = pInMatrix[i][j];
-
-			rPow = 1;
-
-			ret = true;
-
-			while (ret && rPow < thePower) {
-				ret = cyno_MatrixMulti2D2D(indim1, indim2, pTmpMatrix, indim1, indim2, pInMatrix, pOutMatrix);
-				rPow++;
-				// copy OutMatrix to TmpMatrix
-				for (i = 0; i < indim1; i++)
-					for (j = 0; j < indim2; j++)
-						pTmpMatrix[i][j] = pOutMatrix[i][j];
-			}
-
-			if (ret)
-				ret = cyno_ConvertToSafeArray2D(psaInMatrix, outdim1, outdim2, pOutMatrix);
-		}
-
-		cyno_free_matrix(pInMatrix);
-		cyno_free_matrix(pTmpMatrix);
-		cyno_free_matrix(pOutMatrix);
-	}
-	return ret;
-}
-
 //Purpose
 //		Cholesky Decompostion
 //Parameters
@@ -812,68 +392,6 @@ CYNOMATHUTILITY_API bool _stdcall cyno_MatrixPower(SAFEARRAY** psaInMatrix, shor
 //Remarks
 //		Array psaInMatrix must be 2 dimension square matrix.
 //		The result will be returned through array psaInMatrix.
-
-CYNOMATHUTILITY_API bool _stdcall cyno_CholeskyDecomp(SAFEARRAY** psaSquareMatrix) {
-	short i, j, k;
-	bool chk;
-	long indim1, indim2;
-	double** pTmp, ** pSquareMatrix, sum;
-
-	chk = false;
-
-	if ((*psaSquareMatrix)->cDims == 2) {
-		indim1 = (*psaSquareMatrix)->rgsabound[1].cElements;
-		indim2 = (*psaSquareMatrix)->rgsabound[0].cElements;
-
-		if (indim1 == indim2) {
-			pTmp = cyno_alloc_matrix(indim1, indim1);
-			pSquareMatrix = cyno_alloc_matrix(indim1, indim1);
-			if (pTmp == NULL || pSquareMatrix == NULL) {
-				cyno_free_matrix(pTmp);
-				cyno_free_matrix(pSquareMatrix);
-				return false;
-			}
-
-			chk = cyno_ConvertFromSafeArray2D(psaSquareMatrix, indim1, indim1, pSquareMatrix);
-			for (i = 0; i < indim1; i++)
-				for (j = i; j < indim1; j++) {
-					sum = pSquareMatrix[i][j];
-					for (k = i - 1; k >= 0; k--)
-						sum = sum - pSquareMatrix[i][k] * pSquareMatrix[j][k];
-					if (i == j) {
-						if (sum < 0) {
-							//deallocate memory
-							cyno_free_matrix(pSquareMatrix);
-							cyno_free_matrix(pTmp);
-							return false;
-						}
-						else
-							pTmp[i][i] = sqrt(sum);
-					}
-					else {
-						pTmp[j][i] = sum / pTmp[i][i];
-						pSquareMatrix[j][i] = pTmp[j][i];
-					}
-				}
-			for (i = 0; i < indim1; i++)
-				for (j = i + 1; j < indim1; j++)
-					pTmp[i][j] = 0;
-
-			//copy matrix from pTmp to pSquareMatrix
-			for (i = 0; i < indim1; i++)
-				for (j = 0; j < indim1; j++)
-					pSquareMatrix[i][j] = pTmp[i][j];
-			chk = cyno_ConvertToSafeArray2D(psaSquareMatrix, indim1, indim1, pSquareMatrix);
-
-			//deallocate memory
-			cyno_free_matrix(pSquareMatrix);
-			cyno_free_matrix(pTmp);
-			chk = true;
-		}
-	}
-
-	return chk;
-}
 
 double Pythag(double xArg, double yArg)
 {
@@ -921,7 +439,7 @@ short sign(double x) {
 }
 
 bool cyno_IsSymmetric(double** theMatrix, long dim1, long dim2, double tol) {
-	short i, j;
+	long i, j;
 	double x;
 	bool msym;
 
@@ -952,7 +470,7 @@ bool cyno_IsSymmetric(double** theMatrix, long dim1, long dim2, double tol) {
 
 bool cyno_HouseHolder(long dim, double** aMatrix, double* dVec, double* evec, bool eigenVecs)
 {
-	short i, j, k, l;
+	long i, j, k, l;
 	double sc, hh, h, g, f;
 
 	for (i = dim - 1; i >= 1; i--)
@@ -1020,27 +538,28 @@ bool cyno_HouseHolder(long dim, double** aMatrix, double* dVec, double* evec, bo
 				}
 			dVec[i] = aMatrix[i][i];
 			aMatrix[i][i] = 1;
-			for (j = 0; j <= l; j++) {
-				aMatrix[j][i] = 0;
-				aMatrix[i][j] = 0;
-			}
+				for (j = 0; j <= l; j++) {
+					aMatrix[j][i] = 0;
+					aMatrix[i][j] = 0;
+				}
 		}
 	else
-		dVec[i] = aMatrix[i][i];
+		for (i = 0; i < dim; i++)
+			dVec[i] = aMatrix[i][i];
 	return true;
 }
 
 
 bool cyno_TriDiagEigenSystem(long numElements, double* dVec, double* evec, double** eigenVecs)
 {
-	short m, l, iter, i, k;
+	long m, l, iter, i, k;
 	double s, r, p, g, f, dd, c, b;
 	bool eigvs;
 	double tolerance;
 
 	tolerance = 0.0000000001;
-
-	eigvs = true;
+	
+	eigvs = (eigenVecs != NULL);
 
 	for (i = 1; i < numElements; i++)
 		evec[i - 1] = evec[i];
@@ -1104,8 +623,8 @@ bool cyno_TriDiagEigenSystem(long numElements, double* dVec, double* evec, doubl
 
 
 bool UnbalanceVectors(long vMatrixDim1, long vMatrixDim2, double** vMatrix, long transDim,
-	double* trans, short bL, short bH, bool isLeft) {
-	short i, ii, j, k;
+	double* trans, long bL, long bH, bool isLeft) {
+	long i, ii, j, k;
 	double s;
 
 	if (vMatrixDim1 == vMatrixDim2 && vMatrixDim2 == transDim) {
@@ -1138,8 +657,8 @@ bool UnbalanceVectors(long vMatrixDim1, long vMatrixDim2, double** vMatrix, long
 }
 
 bool BalanceMatrix(long theMatrixDim1, long theMatrixDim2, double** theMatrix, long transDim,
-	double* trans, short* bL, short* bH) {
-	short i, j, rput, cput;
+	double* trans, long* bL, long* bH) {
+	long i, j, rput, cput;
 	double tmp, c, r, f, g, s;
 	bool isol;
 
@@ -1191,18 +710,18 @@ bool BalanceMatrix(long theMatrixDim1, long theMatrixDim2, double** theMatrix, l
 			}
 		if (isol) {
 			trans[cput] = i;
-			if (cput != i) {
-				for (j = 0; j <= theMatrixDim1 - 1; j++) {
-					tmp = theMatrix[i][j];
-					theMatrix[i][j] = theMatrix[cput][j];
-					theMatrix[cput][j] = tmp;
+				if (cput != i) {
+					for (j = 0; j <= theMatrixDim1 - 1; j++) {
+						tmp = theMatrix[i][j];
+						theMatrix[i][j] = theMatrix[cput][j];
+						theMatrix[cput][j] = tmp;
+					}
+					for (j = 0; j <= theMatrixDim1 - 1; j++) {
+						tmp = theMatrix[j][i];
+						theMatrix[j][i] = theMatrix[j][cput];
+						theMatrix[j][cput] = tmp;
+					}
 				}
-				for (j = 0; j <= theMatrixDim1 - 1; j++) {
-					tmp = theMatrix[j][cput];
-					theMatrix[j][i] = theMatrix[j][cput];
-					theMatrix[j][cput] = tmp;
-				}
-			}
 			if (cput == rput) {
 				*bL = cput;
 				*bH = rput;
@@ -1261,9 +780,9 @@ bool BalanceMatrix(long theMatrixDim1, long theMatrixDim2, double** theMatrix, l
 }
 
 bool Hessenberg(long aMatrixDim1, long aMatrixDim2, double** aMatrix, long transDim, double* trans,
-	long zMatrixDim1, long zMatrixDim2, double** zMatrix, short bL, short bH, bool eigvects) {
-	short m, j, i, la, kp;
-	short mm, mp, kl, bbl, bbh;
+	long zMatrixDim1, long zMatrixDim2, double** zMatrix, long bL, long bH, bool eigvects) {
+	long m, j, i, la, kp;
+	long mm, mp, kl, bbl, bbh;
 	double x, y;
 
 	if (aMatrixDim1 != aMatrixDim2)
@@ -1354,10 +873,10 @@ bool Hessenberg(long aMatrixDim1, long aMatrixDim2, double** aMatrix, long trans
 bool HessEigenSystem(long hMatrixDim1, long hMatrixDim2, double** hMatrix,
 	long zMatrixDim1, long zMatrixDim2, double** zMatrix,
 	long wrDim, double* wr, long wiDim, double* wi,
-	short bL, short bH, bool eigvects) {
-	short i, j, k, l, m;
-	short en, na, enm2, its, mp2;
-	short bbl, bbh;
+	long bL, long bH, bool eigvects) {
+	long i, j, k, l, m;
+	long en, na, enm2, its, mp2;
+	long bbl, bbh;
 	double norm, tst1, tst2, x, y, zz, p;
 	double q, r, s, ra, sa, t, w;
 	double vr, vi, thr, thi;
@@ -1817,131 +1336,6 @@ bool HessEigenSystem(long hMatrixDim1, long hMatrixDim2, double** hMatrix,
 //Remarks
 //		tMatrix, vr, vi, vMatrix must be sized properly and all dimensions must have the same size
 
-CYNOMATHUTILITY_API bool _stdcall cyno_EigenSystem(SAFEARRAY** tMatrix, SAFEARRAY** vr, SAFEARRAY** vi, SAFEARRAY** vMatrix,
-	bool computeVects, double symTol, bool sortVects) {
-
-	short mtop, mbot;
-	bool chk;
-	double** ptMatrix, ** pvMatrix;
-	double* pArrayElements_vi, * btrans, * htrans;
-
-	long i;
-
-	bool ret;
-
-	long tMatrix_D1Elements, tMatrix_D2Elements;
-
-	tMatrix_D1Elements = (*tMatrix)->rgsabound[0].cElements;
-	tMatrix_D2Elements = (*tMatrix)->rgsabound[1].cElements;
-
-	if ((*tMatrix)->cDims == 2 && tMatrix_D1Elements == tMatrix_D2Elements) {
-
-		// Allocate memory for tMatrix and vMatrix assuming vMatrix has same dimension as tMatrix
-		ptMatrix = cyno_alloc_matrix(tMatrix_D1Elements, tMatrix_D2Elements);
-		pvMatrix = cyno_alloc_matrix(tMatrix_D1Elements, tMatrix_D2Elements);
-		btrans = cyno_alloc_double_array(tMatrix_D1Elements);
-		htrans = cyno_alloc_double_array(tMatrix_D1Elements);
-		if (ptMatrix == NULL || pvMatrix == NULL || btrans == NULL || htrans == NULL) {
-			cyno_free_matrix(ptMatrix);
-			cyno_free_matrix(pvMatrix);
-			free(btrans);
-			free(htrans);
-			return false;
-		}
-
-		ret = cyno_ConvertFromSafeArray2D(tMatrix, tMatrix_D1Elements, tMatrix_D2Elements, ptMatrix);
-		ret = cyno_IsSymmetric(ptMatrix, tMatrix_D1Elements, tMatrix_D2Elements, symTol);
-		if (ret) {
-
-
-			if (computeVects) {
-				chk = cyno_HouseHolder(tMatrix_D1Elements, ptMatrix, (double*)(*vr)->pvData, (double*)(*vi)->pvData, computeVects);
-				if (chk) {
-
-					cyno_MatrixCopy(tMatrix_D1Elements, tMatrix_D2Elements, ptMatrix, pvMatrix);
-
-					chk = cyno_TriDiagEigenSystem(tMatrix_D1Elements, (double*)(*vr)->pvData, (double*)(*vi)->pvData, pvMatrix);
-
-				}
-				else
-					chk = false;
-			}
-			else {
-				chk = cyno_HouseHolder(tMatrix_D1Elements, ptMatrix, (double*)(*vr)->pvData, (double*)(*vi)->pvData, computeVects);
-				if (chk) {
-					//ret = cyno_ConvertFromSafeArray2D(vMatrix, tMatrix_D1Elements, tMatrix_D2Elements, pvMatrix);
-					chk = cyno_TriDiagEigenSystem(tMatrix_D1Elements, (double*)(*vr)->pvData, (double*)(*vi)->pvData, pvMatrix);
-				}
-			}
-
-			if (chk) {
-				pArrayElements_vi = (double*)(*vi)->pvData;
-				for (i = 0; i < (*vi)->rgsabound[0].cElements; i++)
-					pArrayElements_vi[i] = 0;
-			}
-		}
-		else {
-			if (computeVects) {
-
-				chk = BalanceMatrix(tMatrix_D1Elements, tMatrix_D2Elements, ptMatrix, tMatrix_D1Elements, btrans, &mbot, &mtop);
-
-
-
-				if (chk)
-					chk = Hessenberg(tMatrix_D1Elements, tMatrix_D2Elements, ptMatrix, tMatrix_D1Elements, htrans, tMatrix_D1Elements,
-						tMatrix_D2Elements, pvMatrix, mbot, mtop, computeVects);
-
-
-				if (chk)
-					chk = HessEigenSystem(tMatrix_D1Elements, tMatrix_D2Elements, ptMatrix,
-						tMatrix_D1Elements, tMatrix_D2Elements, pvMatrix,
-						tMatrix_D1Elements, (double*)(*vr)->pvData, tMatrix_D1Elements, (double*)(*vi)->pvData,
-						mbot, mtop, computeVects);
-
-
-				if (chk)
-					chk = UnbalanceVectors(tMatrix_D1Elements, tMatrix_D2Elements, pvMatrix, tMatrix_D1Elements, btrans, mbot, mtop, false);
-
-			}
-			else {
-				chk = BalanceMatrix(tMatrix_D1Elements, tMatrix_D2Elements, ptMatrix, tMatrix_D1Elements, btrans, &mbot, &mtop);
-
-
-
-				if (chk)
-					chk = Hessenberg(tMatrix_D1Elements, tMatrix_D2Elements, ptMatrix, tMatrix_D1Elements, htrans, tMatrix_D1Elements,
-						tMatrix_D2Elements, pvMatrix, mbot, mtop, computeVects);
-
-
-
-				if (chk)
-					chk = HessEigenSystem(tMatrix_D1Elements, tMatrix_D2Elements, ptMatrix,
-						tMatrix_D1Elements, tMatrix_D2Elements, pvMatrix,
-						tMatrix_D1Elements, (double*)(*vr)->pvData, tMatrix_D1Elements, (double*)(*vi)->pvData,
-						mbot, mtop, computeVects);
-
-			}
-		
-		}
-
-
-		ret = cyno_ConvertToSafeArray2D(vMatrix, tMatrix_D1Elements, tMatrix_D2Elements, pvMatrix);
-		ret = cyno_ConvertToSafeArray2D(tMatrix, tMatrix_D1Elements, tMatrix_D2Elements, ptMatrix);
-
-
-		// De-Allocate memory to prevent memory leak
-		cyno_free_matrix(ptMatrix);
-		cyno_free_matrix(pvMatrix);
-		free(btrans);
-		free(htrans);
-
-
-		return chk;
-	}
-	else
-		return false;
-}
-
 
 //Purpose
 //		Simpler massage way - flooring eigenvalues to one value(10^-8)
@@ -1952,103 +1346,6 @@ CYNOMATHUTILITY_API bool _stdcall cyno_EigenSystem(SAFEARRAY** tMatrix, SAFEARRA
 //Remarks
 //		The result is returned through CorrMatrix		
 
-CYNOMATHUTILITY_API bool _stdcall cyno_PDCorrMatrix(SAFEARRAY** CorrMatrix) {
-	SAFEARRAY* e;
-	SAFEARRAY* v;
-	SAFEARRAY* vi;
-	SAFEARRAY* sa_temp4;
-	SAFEARRAYBOUND rgsabound1[2];
-	SAFEARRAYBOUND rgsabound2[1];
-
-
-	short i;
-	bool chk, ret;
-
-	long CorrMatrix_D1Elements, CorrMatrix_D2Elements;
-
-	double** peMatrix, ** temp3, ** temp4;
-	double* pvMatrix;
-
-	e = NULL;
-	v = NULL;
-	vi = NULL;
-	sa_temp4 = NULL;
-
-	chk = false;
-	if ((*CorrMatrix)->cDims == 2) {
-		CorrMatrix_D1Elements = (*CorrMatrix)->rgsabound[0].cElements;
-		CorrMatrix_D2Elements = (*CorrMatrix)->rgsabound[1].cElements;
-
-		if (CorrMatrix_D1Elements == CorrMatrix_D2Elements) {
-			rgsabound1[0].lLbound = 0;
-			rgsabound1[0].cElements = CorrMatrix_D1Elements;
-			rgsabound1[1].lLbound = 0;
-			rgsabound1[1].cElements = CorrMatrix_D1Elements;
-			rgsabound2[0].lLbound = 0;
-			rgsabound2[0].cElements = CorrMatrix_D1Elements;
-			e = SafeArrayCreate(VT_R8, 2, rgsabound1);
-			sa_temp4 = SafeArrayCreate(VT_R8, 2, rgsabound1);
-			v = SafeArrayCreate(VT_R8, 1, rgsabound2);
-			vi = SafeArrayCreate(VT_R8, 1, rgsabound2);
-			if (e != NULL && v != NULL && vi != NULL && sa_temp4 != NULL) {
-
-
-				chk = cyno_EigenSystem(CorrMatrix, &v, &vi, &e, true, 0.0, false);
-				if (chk) {
-
-					peMatrix = cyno_alloc_matrix(CorrMatrix_D1Elements, CorrMatrix_D2Elements);
-					temp3 = cyno_alloc_matrix(CorrMatrix_D1Elements, CorrMatrix_D2Elements);
-					temp4 = cyno_alloc_matrix(CorrMatrix_D1Elements, CorrMatrix_D2Elements);
-					pvMatrix = cyno_alloc_double_array(CorrMatrix_D1Elements);
-					if (peMatrix == NULL || temp3 == NULL || temp4 == NULL || pvMatrix == NULL) {
-						cyno_free_matrix(peMatrix);
-						cyno_free_matrix(temp3);
-						cyno_free_matrix(temp4);
-						free(pvMatrix);
-						chk = false;
-					} else {
-
-					ret = cyno_ConvertFromSafeArray2D(&e, CorrMatrix_D1Elements, CorrMatrix_D2Elements, peMatrix);
-					ret = cyno_ConvertFromSafeArray1D(&v, CorrMatrix_D1Elements, pvMatrix);
-
-					for (i = 0; i < CorrMatrix_D1Elements; i++)
-						if (pvMatrix[i] <= 0.00000000001)
-							pvMatrix[i] = 0.00000000001;
-						else
-							//v(i) = Math.Sqr(v(i))
-							pvMatrix[i] = pvMatrix[i];
-					cyno_MatrixCopy(CorrMatrix_D1Elements, CorrMatrix_D2Elements, peMatrix, temp3);
-
-
-					chk = cyno_DiagonalMatrixMultiplyMatrixVector(CorrMatrix_D1Elements, CorrMatrix_D1Elements, peMatrix, CorrMatrix_D1Elements, pvMatrix);
-
-					chk = cyno_InverseMatrix(CorrMatrix_D1Elements, CorrMatrix_D1Elements, temp3, temp4);
-
-					ret = cyno_ConvertToSafeArray2D(&sa_temp4, CorrMatrix_D1Elements, CorrMatrix_D1Elements, temp4);
-					ret = cyno_ConvertToSafeArray2D(&e, CorrMatrix_D1Elements, CorrMatrix_D1Elements, peMatrix);
-					chk = cyno_MatrixMultiply_2(&e, &sa_temp4, CorrMatrix);
-					}
-
-					cyno_free_matrix(peMatrix);
-					cyno_free_matrix(temp3);
-					cyno_free_matrix(temp4);
-					free(pvMatrix);
-
-				}
-				else
-					chk = false;
-			}
-		}
-	}
-	if (e != NULL) SafeArrayDestroy(e);
-	if (sa_temp4 != NULL) SafeArrayDestroy(sa_temp4);
-	if (v != NULL) SafeArrayDestroy(v);
-	if (vi != NULL) SafeArrayDestroy(vi);
-
-	return chk;
-
-}
-
 //Purpose
 //		Massage the matrix so that we can do cholesky decomposition
 //Parameters
@@ -2057,124 +1354,6 @@ CYNOMATHUTILITY_API bool _stdcall cyno_PDCorrMatrix(SAFEARRAY** CorrMatrix) {
 //		bool
 //Remarks
 //		The result is returned through CorrMatrix		
-
-CYNOMATHUTILITY_API bool _stdcall cyno_ApproximateCorrMatrix(SAFEARRAY** CorrMatrix) {
-	SAFEARRAY* e;
-	SAFEARRAY* v;
-	SAFEARRAY* vi;
-	SAFEARRAY* sa_temp3;
-	SAFEARRAY* sa_temp4;
-	SAFEARRAYBOUND rgsabound1[2];
-	SAFEARRAYBOUND rgsabound2[1];
-
-
-
-	short i, j;
-	bool chk, ret;
-	double s;
-
-	long CorrMatrix_D1Elements, CorrMatrix_D2Elements;
-
-	double** peMatrix, * temp2, ** temp3;
-	double* pvMatrix;
-
-	e = NULL;
-	v = NULL;
-	vi = NULL;
-	sa_temp3 = NULL;
-	sa_temp4 = NULL;
-
-	chk = false;
-	if ((*CorrMatrix)->cDims == 2) {
-		CorrMatrix_D1Elements = (*CorrMatrix)->rgsabound[0].cElements;
-		CorrMatrix_D2Elements = (*CorrMatrix)->rgsabound[1].cElements;
-
-		if (CorrMatrix_D1Elements == CorrMatrix_D2Elements) {
-			rgsabound1[0].lLbound = 0;
-			rgsabound1[0].cElements = CorrMatrix_D1Elements;
-			rgsabound1[1].lLbound = 0;
-			rgsabound1[1].cElements = CorrMatrix_D1Elements;
-			rgsabound2[0].lLbound = 0;
-			rgsabound2[0].cElements = CorrMatrix_D1Elements;
-			e = SafeArrayCreate(VT_R8, 2, rgsabound1);
-			sa_temp3 = SafeArrayCreate(VT_R8, 2, rgsabound1);
-			sa_temp4 = SafeArrayCreate(VT_R8, 2, rgsabound1);
-			v = SafeArrayCreate(VT_R8, 1, rgsabound2);
-			vi = SafeArrayCreate(VT_R8, 1, rgsabound2);
-			if (e != NULL && v != NULL && vi != NULL && sa_temp4 != NULL && sa_temp3 != NULL) {
-
-
-				chk = cyno_EigenSystem(CorrMatrix, &v, &vi, &e, true, 0.0, false);
-				if (chk) {
-
-					peMatrix = cyno_alloc_matrix(CorrMatrix_D1Elements, CorrMatrix_D2Elements);
-					temp3 = cyno_alloc_matrix(CorrMatrix_D1Elements, CorrMatrix_D2Elements);
-					pvMatrix = cyno_alloc_double_array(CorrMatrix_D1Elements);
-					temp2 = cyno_alloc_double_array(CorrMatrix_D1Elements);
-					if (peMatrix == NULL || temp3 == NULL || pvMatrix == NULL || temp2 == NULL) {
-						cyno_free_matrix(peMatrix);
-						cyno_free_matrix(temp3);
-						free(pvMatrix);
-						free(temp2);
-						chk = false;
-					} else {
-
-					ret = cyno_ConvertFromSafeArray2D(&e, CorrMatrix_D1Elements, CorrMatrix_D2Elements, peMatrix);
-					ret = cyno_ConvertFromSafeArray1D(&v, CorrMatrix_D1Elements, pvMatrix);
-
-					for (i = 0; i < CorrMatrix_D1Elements; i++)
-						if (pvMatrix[i] < 0)
-							pvMatrix[i] = 0;
-						else
-							pvMatrix[i] = sqrt(pvMatrix[i]);
-
-					for (i = 0; i < CorrMatrix_D1Elements; i++) {
-						s = 0;
-						for (j = 0; j < CorrMatrix_D1Elements; j++)
-							s = s + peMatrix[i][j] * peMatrix[i][j] * pvMatrix[j];
-						temp2[i] = sqrt(1 / s);
-					}
-
-					chk = cyno_DiagonalMatrixMultiplyMatrixVector(CorrMatrix_D1Elements, CorrMatrix_D1Elements, peMatrix, CorrMatrix_D1Elements, pvMatrix);
-
-
-					chk = cyno_DiagonalMatrixMultiply(CorrMatrix_D1Elements, temp2, CorrMatrix_D1Elements, CorrMatrix_D1Elements, peMatrix);
-
-
-					cyno_MatrixCopy(CorrMatrix_D1Elements, CorrMatrix_D2Elements, peMatrix, temp3);
-
-
-
-					ret = cyno_ConvertToSafeArray2D(&e, CorrMatrix_D1Elements, CorrMatrix_D1Elements, peMatrix);
-					chk = cyno_MatrixTranspose(&e, &sa_temp4);
-					ret = cyno_ConvertFromSafeArray2D(&sa_temp4, CorrMatrix_D1Elements, CorrMatrix_D2Elements, peMatrix);
-
-
-
-					ret = cyno_ConvertToSafeArray2D(&sa_temp3, CorrMatrix_D1Elements, CorrMatrix_D1Elements, temp3);
-					chk = cyno_MatrixMultiply_2(&sa_temp3, &sa_temp4, CorrMatrix);
-					}
-
-					cyno_free_matrix(peMatrix);
-					cyno_free_matrix(temp3);
-					free(pvMatrix);
-					free(temp2);
-
-				}
-				else
-					chk = false;
-			}
-		}
-	}
-	if (e != NULL) SafeArrayDestroy(e);
-	if (sa_temp3 != NULL) SafeArrayDestroy(sa_temp3);
-	if (sa_temp4 != NULL) SafeArrayDestroy(sa_temp4);
-	if (v != NULL) SafeArrayDestroy(v);
-	if (vi != NULL) SafeArrayDestroy(vi);
-
-	return chk;
-
-}
 
 //Purpose
 //		Solving a set of linear equations (simple case, only for non-singular matrix)
@@ -2186,44 +1365,6 @@ CYNOMATHUTILITY_API bool _stdcall cyno_ApproximateCorrMatrix(SAFEARRAY** CorrMat
 //		bool
 //Remarks
 //		All dimensions must be in same size. xInputJacob, xInputArray, xOutPutArray must be sized properly before call this function.		
-
-CYNOMATHUTILITY_API bool _stdcall cyno_LinearSystemSolver(SAFEARRAY** xInputJacob, SAFEARRAY** xInputArray, SAFEARRAY** xOutputArray)
-{
-	double** temp, ** inverse;
-	long D1Elements, D2Elements;
-	bool chk;
-	long i;
-
-
-
-	chk = false;
-	if ((*xInputJacob)->cDims == 2) {
-		D1Elements = (*xInputJacob)->rgsabound[0].cElements;
-		D2Elements = (*xInputJacob)->rgsabound[1].cElements;
-		if (D1Elements == D2Elements) {
-			// allocate memory
-			temp = cyno_alloc_matrix(D1Elements, D2Elements);
-			inverse = cyno_alloc_matrix(D1Elements, D2Elements);
-			if (temp == NULL || inverse == NULL) {
-				cyno_free_matrix(temp);
-				cyno_free_matrix(inverse);
-				return false;
-			}
-
-			chk = cyno_ConvertFromSafeArray2D(xInputJacob, D1Elements, D2Elements, temp);
-			chk = cyno_InverseMatrix(D1Elements, D2Elements, temp, inverse);
-			chk = cyno_ConvertToSafeArray2D(xInputJacob, D1Elements, D1Elements, inverse);
-			chk = cyno_MatrixMultiply_2(xInputJacob, xInputArray, xOutputArray);
-
-			cyno_free_matrix(temp);
-			cyno_free_matrix(inverse);
-		}
-		else
-			chk = false;
-	}
-
-	return chk;
-}
 
 CYNOMATHUTILITY_API bool __stdcall cyno_MatrixScalePlain(double a, const double* input, long rows, long cols, double* output)
 {
@@ -2242,34 +1383,36 @@ CYNOMATHUTILITY_API bool __stdcall cyno_MatrixScalePlain(double a, const double*
 
 CYNOMATHUTILITY_API bool __stdcall cyno_MatrixMultiplyPlain(const double* a, long aRows, long aCols, const double* b, long bRows, long bCols, double* output)
 {
-	double** aMatrix;
-	double** bMatrix;
-	double** outMatrix;
-	bool ret;
+	double* target;
+	long i, j, k;
+	double sum;
 
 	if (a == NULL || b == NULL || output == NULL || aRows <= 0 || aCols <= 0 || bRows <= 0 || bCols <= 0)
 		return false;
-
-	aMatrix = cyno_alloc_matrix(aRows, aCols);
-	bMatrix = cyno_alloc_matrix(bRows, bCols);
-	outMatrix = cyno_alloc_matrix(aRows, bCols);
-	if (aMatrix == NULL || bMatrix == NULL || outMatrix == NULL) {
-		cyno_free_matrix(aMatrix);
-		cyno_free_matrix(bMatrix);
-		cyno_free_matrix(outMatrix);
+	if (aCols != bRows)
 		return false;
+
+	target = output;
+	if (output == a || output == b) {
+		target = cyno_alloc_double_array(aRows * bCols);
+		if (target == NULL)
+			return false;
 	}
 
-	cyno_copy_flat_to_matrix(a, aRows, aCols, aMatrix);
-	cyno_copy_flat_to_matrix(b, bRows, bCols, bMatrix);
-	ret = cyno_MatrixMulti2D2D(aRows, aCols, aMatrix, bRows, bCols, bMatrix, outMatrix);
-	if (ret)
-		cyno_copy_matrix_to_flat(outMatrix, aRows, bCols, output);
+	for (i = 0; i < aRows; i++) {
+		for (j = 0; j < bCols; j++) {
+			sum = 0.0;
+			for (k = 0; k < aCols; k++)
+				sum += a[i * aCols + k] * b[k * bCols + j];
+			target[i * bCols + j] = sum;
+		}
+	}
 
-	cyno_free_matrix(aMatrix);
-	cyno_free_matrix(bMatrix);
-	cyno_free_matrix(outMatrix);
-	return ret;
+	if (target != output) {
+		memcpy(output, target, (size_t)(aRows * bCols) * sizeof(double));
+		free(target);
+	}
+	return true;
 }
 
 CYNOMATHUTILITY_API bool __stdcall cyno_VectorDotPlain(const double* a, const double* b, long size, double* output)
@@ -2316,26 +1459,27 @@ CYNOMATHUTILITY_API bool __stdcall cyno_InverseMatrixPlain(const double* input, 
 
 CYNOMATHUTILITY_API bool __stdcall cyno_MatrixTransposePlain(const double* input, long rows, long cols, double* output)
 {
-	double** inMatrix;
-	double** outMatrix;
+	double* target;
+	long i, j;
 
 	if (input == NULL || output == NULL || rows <= 0 || cols <= 0)
 		return false;
 
-	inMatrix = cyno_alloc_matrix(rows, cols);
-	outMatrix = cyno_alloc_matrix(cols, rows);
-	if (inMatrix == NULL || outMatrix == NULL) {
-		cyno_free_matrix(inMatrix);
-		cyno_free_matrix(outMatrix);
-		return false;
+	target = output;
+	if (input == output) {
+		target = cyno_alloc_double_array(rows * cols);
+		if (target == NULL)
+			return false;
 	}
 
-	cyno_copy_flat_to_matrix(input, rows, cols, inMatrix);
-	cyno_MatrixTrans(rows, cols, inMatrix, outMatrix);
-	cyno_copy_matrix_to_flat(outMatrix, cols, rows, output);
+	for (i = 0; i < rows; i++)
+		for (j = 0; j < cols; j++)
+			target[j * rows + i] = input[i * cols + j];
 
-	cyno_free_matrix(inMatrix);
-	cyno_free_matrix(outMatrix);
+	if (target != output) {
+		memcpy(output, target, (size_t)(rows * cols) * sizeof(double));
+		free(target);
+	}
 	return true;
 }
 
@@ -2387,54 +1531,37 @@ CYNOMATHUTILITY_API bool __stdcall cyno_MatrixPowerPlain(double* inOutMatrix, lo
 
 CYNOMATHUTILITY_API bool __stdcall cyno_CholeskyDecompPlain(double* inOutMatrix, long dim)
 {
-	double** matrix;
-	double** tmp;
-	short i, j, k;
+	long i, j, k;
 	double sum;
 
 	if (inOutMatrix == NULL || dim <= 0)
 		return false;
 
-	matrix = cyno_alloc_matrix(dim, dim);
-	tmp = cyno_alloc_matrix(dim, dim);
-	if (matrix == NULL || tmp == NULL) {
-		cyno_free_matrix(matrix);
-		cyno_free_matrix(tmp);
-		return false;
-	}
-
-	cyno_copy_flat_to_matrix(inOutMatrix, dim, dim, matrix);
-	for (i = 0; i < dim; i++)
+	for (i = 0; i < dim; i++) {
 		for (j = i; j < dim; j++) {
-			sum = matrix[i][j];
-			for (k = i - 1; k >= 0; k--)
-				sum = sum - matrix[i][k] * matrix[j][k];
+			sum = inOutMatrix[i * dim + j];
+			for (k = 0; k < i; k++)
+				sum -= inOutMatrix[i * dim + k] * inOutMatrix[j * dim + k];
 			if (i == j) {
-				if (sum < 0) {
-					cyno_free_matrix(matrix);
-					cyno_free_matrix(tmp);
+				if (sum <= 0.0)
 					return false;
-				}
-				tmp[i][i] = sqrt(sum);
+				inOutMatrix[i * dim + i] = sqrt(sum);
 			}
 			else {
-				tmp[j][i] = sum / tmp[i][i];
-				matrix[j][i] = tmp[j][i];
+				inOutMatrix[j * dim + i] = sum / inOutMatrix[i * dim + i];
 			}
 		}
+	}
+
 	for (i = 0; i < dim; i++)
 		for (j = i + 1; j < dim; j++)
-			tmp[i][j] = 0;
-
-	cyno_copy_matrix_to_flat(tmp, dim, dim, inOutMatrix);
-	cyno_free_matrix(matrix);
-	cyno_free_matrix(tmp);
+			inOutMatrix[i * dim + j] = 0.0;
 	return true;
 }
 
 CYNOMATHUTILITY_API bool __stdcall cyno_EigenSystemPlain(const double* input, long dim, double* vr, double* vi, double* eigenVectors, bool computeVects, double symTol, bool sortVects)
 {
-	short mtop, mbot;
+	long mtop, mbot;
 	bool chk;
 	bool ret;
 	double** tMatrix;
@@ -2445,14 +1572,14 @@ CYNOMATHUTILITY_API bool __stdcall cyno_EigenSystemPlain(const double* input, lo
 
 	(void)sortVects;
 
-	if (input == NULL || vr == NULL || vi == NULL || eigenVectors == NULL || dim <= 0)
+	if (input == NULL || vr == NULL || vi == NULL || dim <= 0 || (computeVects && eigenVectors == NULL))
 		return false;
 
 	tMatrix = cyno_alloc_matrix(dim, dim);
-	vMatrix = cyno_alloc_matrix(dim, dim);
+	vMatrix = computeVects ? cyno_alloc_matrix(dim, dim) : NULL;
 	btrans = cyno_alloc_double_array(dim);
 	htrans = cyno_alloc_double_array(dim);
-	if (tMatrix == NULL || vMatrix == NULL || btrans == NULL || htrans == NULL) {
+	if (tMatrix == NULL || (computeVects && vMatrix == NULL) || btrans == NULL || htrans == NULL) {
 		cyno_free_matrix(tMatrix);
 		cyno_free_matrix(vMatrix);
 		free(btrans);
@@ -2467,7 +1594,7 @@ CYNOMATHUTILITY_API bool __stdcall cyno_EigenSystemPlain(const double* input, lo
 		if (chk) {
 			if (computeVects)
 				cyno_MatrixCopy(dim, dim, tMatrix, vMatrix);
-			chk = cyno_TriDiagEigenSystem(dim, vr, vi, vMatrix);
+			chk = cyno_TriDiagEigenSystem(dim, vr, vi, computeVects ? vMatrix : NULL);
 		}
 		if (chk) {
 			for (i = 0; i < dim; i++)
@@ -2476,14 +1603,14 @@ CYNOMATHUTILITY_API bool __stdcall cyno_EigenSystemPlain(const double* input, lo
 	} else {
 		chk = BalanceMatrix(dim, dim, tMatrix, dim, btrans, &mbot, &mtop);
 		if (chk)
-			chk = Hessenberg(dim, dim, tMatrix, dim, htrans, dim, dim, vMatrix, mbot, mtop, computeVects);
+			chk = Hessenberg(dim, dim, tMatrix, dim, htrans, dim, dim, computeVects ? vMatrix : NULL, mbot, mtop, computeVects);
 		if (chk)
-			chk = HessEigenSystem(dim, dim, tMatrix, dim, dim, vMatrix, dim, vr, dim, vi, mbot, mtop, computeVects);
+			chk = HessEigenSystem(dim, dim, tMatrix, dim, dim, computeVects ? vMatrix : NULL, dim, vr, dim, vi, mbot, mtop, computeVects);
 		if (chk && computeVects)
 			chk = UnbalanceVectors(dim, dim, vMatrix, dim, btrans, mbot, mtop, false);
 	}
 
-	if (chk)
+	if (chk && computeVects)
 		cyno_copy_matrix_to_flat(vMatrix, dim, dim, eigenVectors);
 
 	cyno_free_matrix(tMatrix);
@@ -2620,34 +1747,30 @@ CYNOMATHUTILITY_API bool __stdcall cyno_ApproximateCorrMatrixPlain(double* inOut
 CYNOMATHUTILITY_API bool __stdcall cyno_LinearSystemSolverPlain(const double* jacobian, const double* rhs, long dim, double* output)
 {
 	double** temp;
-	double** inverse;
-	double* result;
+	long* pVec;
 	bool chk;
 	long i;
+	short d;
 
 	if (jacobian == NULL || rhs == NULL || output == NULL || dim <= 0)
 		return false;
 
 	temp = cyno_alloc_matrix(dim, dim);
-	inverse = cyno_alloc_matrix(dim, dim);
-	result = cyno_alloc_double_array(dim);
-	if (temp == NULL || inverse == NULL || result == NULL) {
+	pVec = cyno_alloc_long_array(dim);
+	if (temp == NULL || pVec == NULL) {
 		cyno_free_matrix(temp);
-		cyno_free_matrix(inverse);
-		free(result);
+		free(pVec);
 		return false;
 	}
 
 	cyno_copy_flat_to_matrix(jacobian, dim, dim, temp);
-	chk = cyno_InverseMatrix(dim, dim, temp, inverse);
+	for (i = 0; i < dim; i++)
+		output[i] = rhs[i];
+	chk = cyno_LUDecomp(dim, dim, temp, pVec, &d);
 	if (chk)
-		chk = cyno_MatrixMulti2D1D(dim, dim, inverse, dim, (double*)rhs, result);
-	if (chk)
-		for (i = 0; i < dim; i++)
-			output[i] = result[i];
+		chk = cyno_LUBackSub(dim, dim, temp, pVec, output);
 
 	cyno_free_matrix(temp);
-	cyno_free_matrix(inverse);
-	free(result);
+	free(pVec);
 	return chk;
 }

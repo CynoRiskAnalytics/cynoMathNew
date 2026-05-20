@@ -75,16 +75,6 @@ namespace cynoFinTool.Numerics
         [DllImport(NativeLibraryName)]
         public static extern bool cyno_NormalRand1DArrayAntithetic([Out] double[] randArray, int size, short randflag);
 
-        /// <summary>
-        /// generate normal random numbers in a 1D array
-        /// </summary>
-        /// <param name="rand_array">The output array with random numbers</param>
-        /// <returns>true if the call was successful</returns>
-        [DllImport(NativeLibraryName)]
-        public static extern bool cyno_CorrelatedNormalRand2DArray(
-            [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_R8)] double[] correlation_matrix,
-            [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_R8)] ref double[] rand_array);
-
         [DllImport(NativeLibraryName)]
         public static extern bool cyno_Rand1DArrayPlain([Out] double[] outArray, long size);
 

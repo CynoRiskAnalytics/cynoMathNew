@@ -9,6 +9,8 @@
 
 
 //Feb 5, 2020 - New random number generators by Jesse Wang
+//May 19, 2026 -Jesse Wang
+//Major updates and performance enhancement. Now this is much faster than both c# and java when random number is larger than 100,000
 
 typedef unsigned long long Ullong;
 //typedef unsigned __int64 Ullong;
@@ -92,6 +94,42 @@ static void fill_uniform_vector_antithetic(double* outArray, long size) {
 		if (i + 1 < size) {
 			outArray[i + 1] = 1.0 - sample;
 		}
+	}
+}
+
+static void apply_lower_triangular_1d(const double* factorMatrix, long dim, const double* independentNormals, double* outArray) {
+	long row;
+	long col;
+
+	for (row = 0; row < dim; row++) {
+		double sum = 0.0;
+		long rowOffset = row * dim;
+		for (col = 0; col <= row; col++) {
+			sum += factorMatrix[rowOffset + col] * independentNormals[col];
+		}
+		outArray[row] = sum;
+	}
+}
+
+static void apply_lower_triangular_2d_sample(const double* factorMatrix, long dim, const double* independentNormals, double* outArray, long samplesPerFactor, long sampleIndex) {
+	long row;
+	long col;
+
+	for (row = 0; row < dim; row++) {
+		double sum = 0.0;
+		long rowOffset = row * dim;
+		for (col = 0; col <= row; col++) {
+			sum += factorMatrix[rowOffset + col] * independentNormals[col];
+		}
+		outArray[row * samplesPerFactor + sampleIndex] = sum;
+	}
+}
+
+static void negate_correlated_sample(double* outArray, long dim, long samplesPerFactor, long sourceIndex, long targetIndex) {
+	long row;
+
+	for (row = 0; row < dim; row++) {
+		outArray[row * samplesPerFactor + targetIndex] = -outArray[row * samplesPerFactor + sourceIndex];
 	}
 }
 
@@ -223,139 +261,6 @@ CYNOMATHUTILITY_API double __stdcall cyno_NormRandInv(void) {
 //			When VBA references this function, return type should be Byte
 //			should the need arise, A wrapper function should be created to convert Byte to boolean
 
-CYNOMATHUTILITY_API bool _stdcall cyno_CorrelatedNormalRand1DArray(SAFEARRAY** psaMatrix, SAFEARRAY** psaOutArr, short randflag) {
-	long i;
-	long size, dim1, dim2;
-	bool ret;
-	double* randomVector;
-	double* correlatedRandomVector;
-	double* pMatrixData;
-	double** pMatrix;
-
-	if ((*psaOutArr)->cDims == 1 && (*psaMatrix)->cDims == 2) {
-		size = (*psaOutArr)->rgsabound[0].cElements;
-		randomVector = alloc_double_buffer(size);
-		correlatedRandomVector = alloc_double_buffer(size);
-		if (randomVector == NULL || correlatedRandomVector == NULL) {
-			free(randomVector);
-			free(correlatedRandomVector);
-			return false;
-		}
-		if (randflag == 1) {
-			for (i = 0; i < size; i++) randomVector[i] = cyno_NormRand();
-		}
-		else {
-			for (i = 0; i < size; i++) randomVector[i] = cyno_NormRandInv();
-		}
-
-		dim1 = (*psaMatrix)->rgsabound[1].cElements;
-		dim2 = (*psaMatrix)->rgsabound[0].cElements;
-
-		pMatrixData = alloc_double_buffer(dim1 * dim2);
-		pMatrix = (pMatrixData == NULL) ? NULL : alloc_row_view(pMatrixData, dim1, dim2);
-		if (pMatrix == NULL) {
-			free(randomVector);
-			free(correlatedRandomVector);
-			free(pMatrixData);
-			return false;
-		}
-
-		ret = cyno_ConvertFromSafeArray2D(psaMatrix, dim1, dim2, pMatrix);
-		ret = cyno_MatrixMulti2D1D(dim1, dim2, pMatrix, size, randomVector, correlatedRandomVector);
-		ret = cyno_ConvertToSafeArray1D(psaOutArr, size, correlatedRandomVector);
-
-		free(pMatrix);
-		free(pMatrixData);
-		free(correlatedRandomVector);
-		free(randomVector);
-
-		return ret;
-	}
-
-	return false;
-}
-
-//Purpose
-//		Generates 1D random number
-//Parameters
-//		psaOutArr	output	1D array that stores the generated random numbers
-//Return Values
-//		bool
-//Remarks
-//		The output array psaOutArr must be one dimension and be sized properly
-//		before call this function.
-
-CYNOMATHUTILITY_API bool _stdcall cyno_Rand1DArray(SAFEARRAY** psaOutArr) {
-	long i;
-	long size;
-	bool ret;
-	double* randomVector;
-
-	if ((*psaOutArr)->cDims == 1) {
-		size = (*psaOutArr)->rgsabound[0].cElements;
-		randomVector = alloc_double_buffer(size);
-		if (randomVector == NULL) {
-			return false;
-		}
-		for (i = 0; i < size; i++) {
-			randomVector[i] = cyno_Rand();
-		}
-
-		ret = cyno_ConvertToSafeArray1D(psaOutArr, size, randomVector);
-		free(randomVector);
-
-		return ret;
-	}
-	return false;
-}
-
-//Purpose
-//		Generates 1D normal random number by BM -can be used to simulate one path
-//Parameters
-//		psaOutArr	output	1D array that stores the generated normal random numbers
-//Return Values
-//		bool
-//Remarks
-//		The output array psaOutArr must be one dimension and be sized properly
-//		before call this function.
-//CYNOMATHUTILITY_API bool _stdcall cyno_NormalRand1DArray(SAFEARRAY** psaOutArr) {
-//	long i;
-//	long size;
-//	double* randomVector;
-//	bool ret;
-//
-//	if ((*psaOutArr)->cDims == 1) {
-//		size = (*psaOutArr)->rgsabound[0].cElements;
-//		randomVector = new double[size];
-//		for (i = 0; i < size; i++) {
-//			randomVector[i] = cyno_NormRand();
-//		}
-//
-//		ret = cyno_ConvertToSafeArray1D(psaOutArr, size, randomVector);
-//
-//		delete[] randomVector;
-//
-//		return ret;
-//	}
-//	return false;
-//}
-
-//CYNOMATHUTILITY_API bool _stdcall cyno_NormalRand1DArray(SAFEARRAY* psaOutArr) {
-//	if (psaOutArr == nullptr || psaOutArr->cDims != 1) return false;
-//
-//	double* pData = nullptr;
-//	SafeArrayAccessData(psaOutArr, (void**)&pData);
-//
-//	if (!pData) return false;
-//
-//	long size = psaOutArr->rgsabound[0].cElements;
-//	for (long i = 0; i < size; ++i)
-//		pData[i] = cyno_NormRand(); // your custom random generator
-//
-//	SafeArrayUnaccessData(psaOutArr);
-//	return true;
-//}
-
 CYNOMATHUTILITY_API bool _stdcall cyno_NormalRand1DArray(double* outArray, int size) {
 	if (!outArray || size <= 0 )
 		return false;
@@ -374,98 +279,6 @@ CYNOMATHUTILITY_API bool __stdcall cyno_NormalRand1DArrayAntithetic(double* outA
 	return true;
 }
 
-
-//Purpose
-//		Generates 2D correlated normal random number by either BM or normal inverse function
-//		This function has a special usage for Razor simulation
-//Parameters
-//		psaMatrix	in	correlation matrix
-//		psaOutArr	out	2D array that stores the generated normal random numbers
-//		randflag	in	Which method is used to generate random number. 1(default)=Box-Muller other value=normal inverse function
-//Return Values
-//		bool
-//Remarks
-//		The output array psaOutArr must be two dimension and be sized properly
-//		before call this function. First dimension of psaOutArr is number of risk factors, second dimension is number of
-//		time nodes
-
-CYNOMATHUTILITY_API bool _stdcall cyno_CorrelatedNormalRand2DArray(SAFEARRAY** psaMatrix, SAFEARRAY** psaOutArr, short randflag) {
-	long i, j;
-	long size1, size2, dim1, dim2;
-	bool ret;
-	double* randomVectorData;
-	double* correlatedRandomVectorData;
-	double** randomVector;
-	double** correlatedRandomVector;
-	double* pMatrixData;
-	double** pMatrix;
-
-	if ((*psaOutArr)->cDims == 2 && (*psaMatrix)->cDims == 2) {
-		size1 = (*psaOutArr)->rgsabound[1].cElements;
-		size2 = (*psaOutArr)->rgsabound[0].cElements;
-
-		dim1 = (*psaMatrix)->rgsabound[1].cElements;
-		dim2 = (*psaMatrix)->rgsabound[0].cElements;
-
-		//Correlation Matrix must be a square.
-		if (dim1 != dim2)
-			return false;
-
-		randomVectorData = alloc_double_buffer(size1 * size2);
-		correlatedRandomVectorData = alloc_double_buffer(size1 * size2);
-		randomVector = (randomVectorData == NULL) ? NULL : alloc_row_view(randomVectorData, size1, size2);
-		correlatedRandomVector = (correlatedRandomVectorData == NULL) ? NULL : alloc_row_view(correlatedRandomVectorData, size1, size2);
-		if (randomVectorData == NULL || correlatedRandomVectorData == NULL || randomVector == NULL || correlatedRandomVector == NULL) {
-			free(randomVector);
-			free(correlatedRandomVector);
-			free(randomVectorData);
-			free(correlatedRandomVectorData);
-			return false;
-		}
-
-		if (randflag == 1) {
-			for (i = 0; i < size1; i++)
-				for (j = 0; j < size2; j++)
-					randomVector[i][j] = cyno_NormRand();
-		}
-		else {
-			for (i = 0; i < size1; i++)
-				for (j = 0; j < size2; j++)
-					randomVector[i][j] = cyno_NormRandInv();
-		}
-
-
-		pMatrixData = alloc_double_buffer(dim1 * dim2);
-		pMatrix = (pMatrixData == NULL) ? NULL : alloc_row_view(pMatrixData, dim1, dim2);
-		if (pMatrix == NULL) {
-			free(randomVector);
-			free(correlatedRandomVector);
-			free(randomVectorData);
-			free(correlatedRandomVectorData);
-			free(pMatrixData);
-			return false;
-		}
-
-		ret = cyno_ConvertFromSafeArray2D(psaMatrix, dim1, dim2, pMatrix);
-
-		if (dim1 == size1)
-			ret = cyno_MatrixMulti2D2D(dim1, dim2, pMatrix, size1, size2, randomVector, correlatedRandomVector);
-		else
-			ret = cyno_MatrixMulti2D2D(size1, size2, randomVector, dim1, dim2, pMatrix, correlatedRandomVector);
-
-		ret = cyno_ConvertToSafeArray2D(psaOutArr, size1, size2, correlatedRandomVector);
-
-		free(pMatrix);
-		free(pMatrixData);
-		free(randomVector);
-		free(correlatedRandomVector);
-		free(randomVectorData);
-		free(correlatedRandomVectorData);
-
-		return ret;
-	}
-	return false;
-}
 
 CYNOMATHUTILITY_API bool __stdcall cyno_Rand1DArrayPlain(double* outArray, long size) {
 	long i;
@@ -493,157 +306,101 @@ CYNOMATHUTILITY_API bool __stdcall cyno_Rand1DArrayPlainAntithetic(double* outAr
 
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand1DArrayPlain(const double* correlationMatrix, long dim, double* outArray, short randflag) {
 	double* randomVector;
-	double* matrixData;
-	double** matrixRows;
-	bool ret;
 
 	if (correlationMatrix == NULL || outArray == NULL || dim <= 0) {
 		return false;
 	}
 
 	randomVector = alloc_double_buffer(dim);
-	matrixData = alloc_double_buffer(dim * dim);
-	matrixRows = (matrixData == NULL) ? NULL : alloc_row_view(matrixData, dim, dim);
-	if (randomVector == NULL || matrixData == NULL || matrixRows == NULL) {
+	if (randomVector == NULL) {
 		free(randomVector);
-		free(matrixData);
-		free(matrixRows);
 		return false;
 	}
 
-	memcpy(matrixData, correlationMatrix, (size_t)(dim * dim) * sizeof(double));
 	fill_random_vector(randomVector, dim, randflag);
-	ret = cyno_MatrixMulti2D1D(dim, dim, matrixRows, dim, randomVector, outArray);
-
-	free(matrixRows);
-	free(matrixData);
+	apply_lower_triangular_1d(correlationMatrix, dim, randomVector, outArray);
 	free(randomVector);
-	return ret;
+	return true;
 }
 
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand1DArrayPlainAntithetic(const double* correlationMatrix, long dim, double* outArray, double* antitheticOutArray, short randflag) {
 	double* randomVector;
-	double* antitheticVector;
-	double* matrixData;
-	double** matrixRows;
-	bool ret;
 
 	if (correlationMatrix == NULL || outArray == NULL || antitheticOutArray == NULL || dim <= 0) {
 		return false;
 	}
 
 	randomVector = alloc_double_buffer(dim);
-	antitheticVector = alloc_double_buffer(dim);
-	matrixData = alloc_double_buffer(dim * dim);
-	matrixRows = (matrixData == NULL) ? NULL : alloc_row_view(matrixData, dim, dim);
-	if (randomVector == NULL || antitheticVector == NULL || matrixData == NULL || matrixRows == NULL) {
+	if (randomVector == NULL) {
 		free(randomVector);
-		free(antitheticVector);
-		free(matrixData);
-		free(matrixRows);
 		return false;
 	}
 
-	memcpy(matrixData, correlationMatrix, (size_t)(dim * dim) * sizeof(double));
 	fill_random_vector(randomVector, dim, randflag);
+	apply_lower_triangular_1d(correlationMatrix, dim, randomVector, outArray);
 	for (long i = 0; i < dim; i++) {
-		antitheticVector[i] = -randomVector[i];
+		antitheticOutArray[i] = -outArray[i];
 	}
 
-	ret = cyno_MatrixMulti2D1D(dim, dim, matrixRows, dim, randomVector, outArray);
-	if (ret) {
-		ret = cyno_MatrixMulti2D1D(dim, dim, matrixRows, dim, antitheticVector, antitheticOutArray);
-	}
-
-	free(matrixRows);
-	free(matrixData);
-	free(antitheticVector);
 	free(randomVector);
-	return ret;
+	return true;
 }
 
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand2DArrayPlain(const double* correlationMatrix, long dim, double* outArray, long samplesPerFactor, short randflag) {
-	double* matrixData;
-	double* randomData;
-	double** matrixRows;
-	double** randomRows;
-	double** outputRows;
-	bool ret;
-	long i;
+	double* randomVector;
+	long sample;
+	long row;
+	long col;
 
 	if (correlationMatrix == NULL || outArray == NULL || dim <= 0 || samplesPerFactor <= 0) {
 		return false;
 	}
 
-	matrixData = alloc_double_buffer(dim * dim);
-	randomData = alloc_double_buffer(dim * samplesPerFactor);
-	matrixRows = (matrixData == NULL) ? NULL : alloc_row_view(matrixData, dim, dim);
-	randomRows = (randomData == NULL) ? NULL : alloc_row_view(randomData, dim, samplesPerFactor);
-	outputRows = alloc_row_view(outArray, dim, samplesPerFactor);
-	if (matrixData == NULL || randomData == NULL || matrixRows == NULL || randomRows == NULL || outputRows == NULL) {
-		free(matrixData);
-		free(randomData);
-		free(matrixRows);
-		free(randomRows);
-		free(outputRows);
+	randomVector = alloc_double_buffer(dim);
+	if (randomVector == NULL) {
 		return false;
 	}
 
-	memcpy(matrixData, correlationMatrix, (size_t)(dim * dim) * sizeof(double));
-	for (i = 0; i < dim * samplesPerFactor; i++) {
-		randomData[i] = (randflag == 1) ? cyno_NormRand() : cyno_NormRandInv();
+	for (sample = 0; sample < samplesPerFactor; sample++) {
+		for (col = 0; col < dim; col++) {
+			randomVector[col] = (randflag == 1) ? cyno_NormRand() : cyno_NormRandInv();
+		}
+		for (row = 0; row < dim; row++) {
+			double sum = 0.0;
+			long rowOffset = row * dim;
+			for (col = 0; col <= row; col++) {
+				sum += correlationMatrix[rowOffset + col] * randomVector[col];
+			}
+			outArray[row * samplesPerFactor + sample] = sum;
+		}
 	}
 
-	ret = cyno_MatrixMulti2D2D(dim, dim, matrixRows, dim, samplesPerFactor, randomRows, outputRows);
-
-	free(outputRows);
-	free(randomRows);
-	free(matrixRows);
-	free(randomData);
-	free(matrixData);
-	return ret;
+	free(randomVector);
+	return true;
 }
 
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand2DArrayPlainAntithetic(const double* correlationMatrix, long dim, double* outArray, long samplesPerFactor, short randflag) {
-	double* matrixData;
-	double* randomData;
-	double** matrixRows;
-	double** randomRows;
-	double** outputRows;
-	bool ret;
-	long factor;
+	double* randomVector;
 	long sample;
 
 	if (correlationMatrix == NULL || outArray == NULL || dim <= 0 || samplesPerFactor <= 0) {
 		return false;
 	}
 
-	matrixData = alloc_double_buffer(dim * dim);
-	randomData = alloc_double_buffer(dim * samplesPerFactor);
-	matrixRows = (matrixData == NULL) ? NULL : alloc_row_view(matrixData, dim, dim);
-	randomRows = (randomData == NULL) ? NULL : alloc_row_view(randomData, dim, samplesPerFactor);
-	outputRows = alloc_row_view(outArray, dim, samplesPerFactor);
-	if (matrixData == NULL || randomData == NULL || matrixRows == NULL || randomRows == NULL || outputRows == NULL) {
-		free(matrixData);
-		free(randomData);
-		free(matrixRows);
-		free(randomRows);
-		free(outputRows);
+	randomVector = alloc_double_buffer(dim);
+	if (randomVector == NULL) {
 		return false;
 	}
 
-	memcpy(matrixData, correlationMatrix, (size_t)(dim * dim) * sizeof(double));
-	for (factor = 0; factor < dim; factor++) {
-		fill_random_vector_antithetic(randomRows[factor], samplesPerFactor, randflag);
+	for (sample = 0; sample < samplesPerFactor; sample += 2) {
+		fill_random_vector(randomVector, dim, randflag);
+		apply_lower_triangular_2d_sample(correlationMatrix, dim, randomVector, outArray, samplesPerFactor, sample);
+		if (sample + 1 < samplesPerFactor) {
+			negate_correlated_sample(outArray, dim, samplesPerFactor, sample, sample + 1);
+		}
 	}
 
-	ret = cyno_MatrixMulti2D2D(dim, dim, matrixRows, dim, samplesPerFactor, randomRows, outputRows);
-
-	free(outputRows);
-	free(randomRows);
-	free(matrixRows);
-	free(randomData);
-	free(matrixData);
-	return ret;
+	free(randomVector);
+	return true;
 }
 

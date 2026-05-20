@@ -18,17 +18,9 @@ EXPORTS
 	cyno_BetaInv
 
 	cyno_IntegrationFin
-	cyno_MatrixMultiply
-	cyno_MatrixMultiply_2
-	cyno_MatrixMultiply_3
-	cyno_InverseMatrix
-	cyno_MatrixTranspose
-	cyno_MatrixPower
-	cyno_CholeskyDecomp
-	cyno_EigenSystem
-	cyno_PDCorrMatrix
-	cyno_ApproximateCorrMatrix
-	cyno_LinearSystemSolver
+	cyno_IntegrationGHBase
+	cyno_IntegrationGH
+	cyno_IntegrationGL
 
 	cyno_Rand_Seed
 	cyno_Rand
@@ -36,10 +28,36 @@ EXPORTS
 	cyno_MTRand
 	cyno_NormRand
 	cyno_NormRandInv
-	cyno_CorrelatedNormalRand1DArray
-	cyno_Rand1DArray
 	cyno_NormalRand1DArray
-	cyno_CorrelatedNormalRand2DArray
+	cyno_NormalRand1DArrayAntithetic
+	cyno_Rand1DArrayPlain
+	cyno_Rand1DArrayPlainAntithetic
+	cyno_Sobol1DArrayPlain
+	cyno_SobolNormal1DArrayPlain
+	cyno_Sobol2DArrayPlain
+	cyno_SobolNormal2DArrayPlain
+	cyno_CorrelatedNormalRand1DArrayPlain
+	cyno_CorrelatedNormalRand2DArrayPlain
+	cyno_CorrelatedNormalRand1DArrayPlainAntithetic
+	cyno_CorrelatedNormalRand2DArrayPlainAntithetic
+	cyno_EquityPathPlain
+	cyno_EquityPathAntitheticPlain
+	cyno_EquityPathSobolPlain
+	cyno_EquityPathsPlain
+	cyno_EquityPathsAntitheticPlain
+	cyno_EquityPathsSobolPlain
+
+	cyno_MatrixScalePlain
+	cyno_MatrixMultiplyPlain
+	cyno_VectorDotPlain
+	cyno_InverseMatrixPlain
+	cyno_MatrixTransposePlain
+	cyno_MatrixPowerPlain
+	cyno_CholeskyDecompPlain
+	cyno_EigenSystemPlain
+	cyno_PDCorrMatrixPlain
+	cyno_ApproximateCorrMatrixPlain
+	cyno_LinearSystemSolverPlain
 
 	cyno_Call
 	cyno_Put

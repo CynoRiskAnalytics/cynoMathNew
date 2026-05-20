@@ -3,6 +3,10 @@
 #include <float.h>
 #include <stdint.h>
 
+//May 14, 2026 -Jesse Wang
+//This is purely Codex generated, need to review it later
+
+
 #define CYNO_SOBOL_MAX_BITS 32
 #define CYNO_SOBOL_EXACT_DIM 8
 #define CYNO_SOBOL_MAX_DIM 32

@@ -2,6 +2,12 @@
 #include "framework.h"
 #include "math.h"
 
+//May 19, 2026 -Jesse Wang
+//reviewed by Codex
+/*/ I’m hardening rootFinder.c against null and non-finite inputs, then I’ll add tests for
+  the documented status modes rather than just the happy path. After that I’ll rebuild
+  and rerun the suite.
+*/
 
 double D1mach(short i)
 {
@@ -17,6 +23,8 @@ double D1mach(short i)
 		D[5] = 0.301029995663981;
 		iSetArray = 1;
 	}
+	if (i < 1 || i > 5)
+		return NAN;
 	return D[i];
 }
 
@@ -134,6 +142,13 @@ CYNOMATHUTILITY_API void __stdcall cyno_Root(FUNCPTR vbFunc, double* x1, double*
 	double p, q, RW, t, tol, z;
 	short IC, KOUNT;
 
+	if (iFlag == NULL)
+		return;
+
+	*iFlag = 5;
+	if (vbFunc == NULL || x1 == NULL || x2 == NULL)
+		return;
+
 
 	// Declare the function pointer
 	//FUNCPTR vbFunc;
@@ -167,9 +182,13 @@ CYNOMATHUTILITY_API void __stdcall cyno_Root(FUNCPTR vbFunc, double* x1, double*
 	IC = 0;
 	t = z;
 	FZ = vbFunc(t);
+	if (!isfinite(FZ))
+		return;
 	fc = FZ;
 	t = *x1;
 	fb = vbFunc(t);
+	if (!isfinite(fb))
+		return;
 	KOUNT = 2;
 
 
@@ -183,6 +202,8 @@ l1:
 		goto l2;
 	t = *x2;
 	fc = vbFunc(t);
+	if (!isfinite(fc))
+		return;
 	KOUNT = 3;
 	if (((FZ > 0) - (FZ < 0)) == ((fc > 0) - (fc < 0)))
 		goto l2;
@@ -262,6 +283,8 @@ l8:
 l9:
 	t = *x1;
 	fb = vbFunc(t);
+	if (!isfinite(fb))
+		return;
 	KOUNT = KOUNT + 1;
 	
 	if (((fb > 0) - (fb < 0)) != ((fc > 0) - (fc < 0)))

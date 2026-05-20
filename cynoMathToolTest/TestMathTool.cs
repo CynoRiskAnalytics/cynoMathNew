@@ -16,9 +16,22 @@ namespace cynoMathToolTest
                 $"Expected {expected}, actual {actual}, tolerance {tolerance}");
         }
 
+        private static void AssertContainsApprox(double[] values, double expected, double tolerance = TightTolerance)
+        {
+            Assert.IsTrue(
+                values.Any(x => Math.Abs(x - expected) <= tolerance),
+                $"Expected to find {expected} within tolerance {tolerance}. Actual: [{string.Join(", ", values)}]");
+        }
+
         private static double SquareMinusTwo(double x) => x * x - 2.0;
 
         private static double Square(double x) => x * x;
+
+        private static double Zero(double x) => 0.0;
+
+        private static double SquarePlusOne(double x) => x * x + 1.0;
+
+        private static double Reciprocal(double x) => 1.0 / x;
 
         [TestMethod]
         public void NormalDistributionFunctionsMatchKnownValues()
@@ -52,6 +65,26 @@ namespace cynoMathToolTest
         }
 
         [TestMethod]
+        public void DistributionFunctionsRejectInvalidBoundaryInputs()
+        {
+            Assert.IsTrue(double.IsNegativeInfinity(cynoMathAPI.cyno_StdNormInv(0.0)));
+            Assert.IsTrue(double.IsPositiveInfinity(cynoMathAPI.cyno_StdNormInv(1.0)));
+            Assert.IsTrue(double.IsNaN(cynoMathAPI.cyno_StdNormInv(-0.1)));
+            Assert.IsTrue(double.IsNaN(cynoMathAPI.cyno_StdNormInv(1.1)));
+
+            Assert.IsTrue(double.IsNaN(cynoMathAPI.cyno_NormCDF(1.0, 0.0, 0.0)));
+            Assert.IsTrue(double.IsNaN(cynoMathAPI.cyno_NormDen(1.0, 0.0, -1.0)));
+            Assert.IsTrue(double.IsNaN(cynoMathAPI.cyno_NormInv(0.5, 0.0, 0.0)));
+
+            Assert.IsTrue(double.IsNaN(cynoMathAPI.cyno_BetaDen(-1.0, 2.0, 0.5)));
+            Assert.IsTrue(double.IsNaN(cynoMathAPI.cyno_BetaDen(2.0, 2.0, -0.1)));
+            Assert.IsTrue(double.IsNaN(cynoMathAPI.cyno_BetaCDF(0.0, 2.0, 0.5)));
+            Assert.IsTrue(double.IsNaN(cynoMathAPI.cyno_BetaCDF(2.0, 2.0, 1.1)));
+            Assert.IsTrue(double.IsNaN(cynoMathAPI.cyno_BetaInv(2.0, 2.0, -0.1)));
+            Assert.IsTrue(double.IsNaN(cynoMathAPI.cyno_BetaInv(2.0, 2.0, 1.1)));
+        }
+
+        [TestMethod]
         public void TestCallbackAndRootFindingWork()
         {
             int callbackValue = cynoMathAPI.cyno_Test(3.0, x => x * x);
@@ -65,6 +98,86 @@ namespace cynoMathToolTest
 
             Assert.AreEqual(1, flag);
             AssertAlmostEqual(Math.Sqrt(2.0), x1, 1e-9);
+        }
+
+        [TestMethod]
+        public void RootFindingReturnsDocumentedFailureModes()
+        {
+            double x1 = -1.0;
+            double x2 = 1.0;
+            short flag = 0;
+
+            cynoMathAPI.cyno_Root(Zero, ref x1, ref x2, 0.0, 1e-12, 1e-12, ref flag);
+            Assert.AreEqual(2, flag);
+
+            x1 = -1.0;
+            x2 = 1.0;
+            flag = 0;
+            cynoMathAPI.cyno_Root(SquarePlusOne, ref x1, ref x2, 0.0, 1e-12, 1e-12, ref flag);
+            Assert.AreEqual(4, flag);
+
+            x1 = -1.0;
+            x2 = 1.0;
+            flag = 0;
+            cynoMathAPI.cyno_Root(Reciprocal, ref x1, ref x2, 0.0, 1e-12, 1e-12, ref flag);
+            Assert.AreEqual(5, flag);
+        }
+
+        [TestMethod]
+        public void EigenSystemHandlesNoVectorAndNonsymmetricBalancedInputs()
+        {
+            double[] symmetric =
+            {
+                4.0, 1.0,
+                1.0, 3.0
+            };
+            double[] vr = new double[2];
+            double[] vi = new double[2];
+            double[] vectors = new double[4];
+
+            Assert.IsTrue(cynoMathAPI.cyno_EigenSystemPlain(symmetric, 2, vr, vi, vectors, false, 0.0, false));
+            AssertContainsApprox(vr, 2.381966011250105, 1e-9);
+            AssertContainsApprox(vr, 4.618033988749895, 1e-9);
+            Assert.IsTrue(vi.All(x => Math.Abs(x) <= TightTolerance));
+
+            double[] nonsymmetric =
+            {
+                1.0, 0.0, 0.0,
+                5.0, 2.0, 6.0,
+                0.0, 0.0, 3.0
+            };
+            vr = new double[3];
+            vi = new double[3];
+            vectors = new double[9];
+
+            Assert.IsTrue(cynoMathAPI.cyno_EigenSystemPlain(nonsymmetric, 3, vr, vi, vectors, true, 0.0, false));
+            AssertContainsApprox(vr, 1.0, 1e-9);
+            AssertContainsApprox(vr, 2.0, 1e-9);
+            AssertContainsApprox(vr, 3.0, 1e-9);
+            Assert.IsTrue(vi.All(x => Math.Abs(x) <= TightTolerance));
+
+            vr = new double[2];
+            vi = new double[2];
+            Assert.IsTrue(cynoMathAPI.cyno_EigenSystemPlain(symmetric, 2, vr, vi, null!, false, 0.0, false));
+            AssertContainsApprox(vr, 2.381966011250105, 1e-9);
+            AssertContainsApprox(vr, 4.618033988749895, 1e-9);
+            Assert.IsTrue(vi.All(x => Math.Abs(x) <= TightTolerance));
+        }
+
+        [TestMethod]
+        public void MatrixLinearSystemSolverProducesExpectedSolution()
+        {
+            double[] jacobian =
+            {
+                4.0, 1.0,
+                2.0, 3.0
+            };
+            double[] rhs = { 1.0, 2.0 };
+            double[] output = new double[2];
+
+            Assert.IsTrue(cynoMathAPI.cyno_LinearSystemSolverPlain(jacobian, rhs, 2, output));
+            AssertAlmostEqual(0.1, output[0], 1e-12);
+            AssertAlmostEqual(0.6, output[1], 1e-12);
         }
 
         [TestMethod]
@@ -295,12 +408,20 @@ namespace cynoMathToolTest
             Assert.IsTrue(cynoMathAPI.cyno_MatrixMultiplyPlain(matrix, 2, 2, matrix, 2, 2, product));
             CollectionAssert.AreEqual(new[] { 7.0, 10.0, 15.0, 22.0 }, product);
 
+            double[] inPlaceProduct = { 1.0, 2.0, 3.0, 4.0 };
+            Assert.IsTrue(cynoMathAPI.cyno_MatrixMultiplyPlain(inPlaceProduct, 2, 2, matrix, 2, 2, inPlaceProduct));
+            CollectionAssert.AreEqual(new[] { 7.0, 10.0, 15.0, 22.0 }, inPlaceProduct);
+
             Assert.IsTrue(cynoMathAPI.cyno_VectorDotPlain(new[] { 1.0, 2.0, 3.0 }, new[] { 4.0, 5.0, 6.0 }, 3, out double dot));
             AssertAlmostEqual(32.0, dot);
 
             double[] transpose = new double[4];
             Assert.IsTrue(cynoMathAPI.cyno_MatrixTransposePlain(matrix, 2, 2, transpose));
             CollectionAssert.AreEqual(new[] { 1.0, 3.0, 2.0, 4.0 }, transpose);
+
+            double[] inPlaceTranspose = { 1.0, 2.0, 3.0, 4.0 };
+            Assert.IsTrue(cynoMathAPI.cyno_MatrixTransposePlain(inPlaceTranspose, 2, 2, inPlaceTranspose));
+            CollectionAssert.AreEqual(new[] { 1.0, 3.0, 2.0, 4.0 }, inPlaceTranspose);
 
             double[] power = { 1.0, 2.0, 3.0, 4.0 };
             Assert.IsTrue(cynoMathAPI.cyno_MatrixPowerPlain(power, 2, 2));

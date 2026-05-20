@@ -65,8 +65,14 @@ CYNOMATHUTILITY_API double __stdcall cyno_StdNormInv(double p)
 
 	//If argument out of bounds, raise error
 	//If p <= 0 Or p >= 1 Then err.Raise 5
-	if (p <= 0 || p >= 1)
-		return -1; // How to raise error in c++
+	if (isnan(p))
+		return NAN;
+	if (p == 0.0)
+		return -INFINITY;
+	if (p == 1.0)
+		return INFINITY;
+	if (p < 0.0 || p > 1.0)
+		return NAN;
 
 
 	if (p < p_low) {
@@ -104,6 +110,8 @@ CYNOMATHUTILITY_API double __stdcall cyno_StdNormInv(double p)
 //Remarks
 
 CYNOMATHUTILITY_API double __stdcall cyno_NormInv(double p, double xMean, double xStdev) {
+	if (isnan(p) || isnan(xMean) || isnan(xStdev) || xStdev <= 0.0)
+		return NAN;
 	return xMean + cyno_StdNormInv(p) * xStdev;
 }
 
@@ -185,6 +193,8 @@ CYNOMATHUTILITY_API double __stdcall cyno_StdNormCDF(double x)
 
 CYNOMATHUTILITY_API double __stdcall cyno_NormCDF(double x, double xMean, double xStdev)
 {
+	if (isnan(x) || isnan(xMean) || isnan(xStdev) || xStdev <= 0.0)
+		return NAN;
 	return cyno_StdNormCDF((x - xMean) / xStdev);
 }
 
@@ -212,21 +222,29 @@ CYNOMATHUTILITY_API double __stdcall cyno_StdNormDen(double x)
 //Remarks
 
 CYNOMATHUTILITY_API double __stdcall cyno_NormDen(double x, double xMean, double xStdev){
+	if (isnan(x) || isnan(xMean) || isnan(xStdev) || xStdev <= 0.0)
+		return NAN;
 	return exp(-pow(x - xMean, 2) / (2 * pow(xStdev, 2))) / sqrt(2 * pi) / xStdev;
 }
 
 
 
 CYNOMATHUTILITY_API double __stdcall cyno_BetaDen(const double a, const double b, double x){
+	if (isnan(a) || isnan(b) || isnan(x) || a <= 0.0 || b <= 0.0 || x < 0.0 || x > 1.0)
+		return NAN;
 	return pow(x, a - 1) * pow(1 - x, b - 1) / beta(a, b);
 }
 
 
 CYNOMATHUTILITY_API double _stdcall cyno_BetaCDF(const double a, const double b, double x){
+	if (isnan(a) || isnan(b) || isnan(x) || a <= 0.0 || b <= 0.0 || x < 0.0 || x > 1.0)
+		return NAN;
 	return beta_inc(a, b, x);
 }
 
 CYNOMATHUTILITY_API double _stdcall cyno_BetaInv(const double a, const double b, double p){
+	if (isnan(a) || isnan(b) || isnan(p) || a <= 0.0 || b <= 0.0 || p < 0.0 || p > 1.0)
+		return NAN;
 
 	return cyno_Beta_inv(a, b, p);
 }
@@ -323,6 +341,8 @@ double beta_cf(const double a, const double b, double x) {
 
 double _stdcall cyno_Beta_inv(const double a, const double b, double p)
 {
+	if (isnan(a) || isnan(b) || isnan(p) || a <= 0.0 || b <= 0.0 || p < 0.0 || p > 1.0)
+		return NAN;
 
 	if (p == 0 || p == 1) return p;
 	else {
@@ -370,6 +390,8 @@ double _stdcall cyno_Beta_inv(const double a, const double b, double p)
 	}
 }
 double beta_inc(const double a, const double b, double x) {
+	if (isnan(a) || isnan(b) || isnan(x) || a <= 0.0 || b <= 0.0 || x < 0.0 || x > 1.0)
+		return NAN;
 
 	double bt;
 	if (x == 0) return 0;

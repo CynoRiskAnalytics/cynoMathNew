@@ -23,66 +23,6 @@
 #ifndef _stdcall
 #define _stdcall
 #endif
-
-typedef long HRESULT;
-typedef unsigned short VARTYPE;
-#define VT_R8 ((VARTYPE)5)
-
-typedef struct tagSAFEARRAYBOUND {
-    unsigned long cElements;
-    long lLbound;
-} SAFEARRAYBOUND;
-
-typedef struct tagSAFEARRAY {
-    unsigned short cDims;
-    SAFEARRAYBOUND rgsabound[2];
-    void* pvData;
-} SAFEARRAY;
-
-static inline HRESULT SafeArrayLock(SAFEARRAY*) { return 0; }
-static inline HRESULT SafeArrayUnlock(SAFEARRAY*) { return 0; }
-
-static inline SAFEARRAY* SafeArrayCreate(VARTYPE, unsigned int cDims, SAFEARRAYBOUND* rgsabound) {
-    if (cDims == 0 || cDims > 2 || rgsabound == NULL) {
-        return NULL;
-    }
-
-    SAFEARRAY* sa = (SAFEARRAY*)malloc(sizeof(SAFEARRAY));
-    if (sa == NULL) {
-        return NULL;
-    }
-    sa->cDims = (unsigned short)cDims;
-
-    for (unsigned int i = 0; i < cDims; ++i) {
-        sa->rgsabound[i] = rgsabound[i];
-    }
-    if (cDims == 1) {
-        sa->rgsabound[1].cElements = 1;
-        sa->rgsabound[1].lLbound = 0;
-    }
-
-    unsigned long totalElements = 1;
-    for (unsigned int i = 0; i < cDims; ++i) {
-        totalElements *= sa->rgsabound[i].cElements;
-    }
-
-    sa->pvData = calloc(totalElements, sizeof(double));
-    if (sa->pvData == NULL) {
-        free(sa);
-        return NULL;
-    }
-    return sa;
-}
-
-static inline HRESULT SafeArrayDestroy(SAFEARRAY* sa) {
-    if (sa == NULL) {
-        return 0;
-    }
-
-    free(sa->pvData);
-    free(sa);
-    return 0;
-}
 #endif
 
 #ifdef _WIN32
@@ -137,13 +77,8 @@ CYNOMATHUTILITY_API double __stdcall cyno_MTRand(void);
 CYNOMATHUTILITY_API double __stdcall cyno_NormRand(void);
 CYNOMATHUTILITY_API double __stdcall cyno_NormRandInv(void);
 CYNOMATHUTILITY_API bool __stdcall cyno_Rand1DArrayPlainAntithetic(double* outArray, long size);
-CYNOMATHUTILITY_API bool _stdcall cyno_CorrelatedNormalRand1DArray(SAFEARRAY** psaMatrix, SAFEARRAY** psaOutArr, short randflag);
-CYNOMATHUTILITY_API bool _stdcall cyno_Rand1DArray(SAFEARRAY** psaOutArr);
-//CYNOMATHUTILITY_API bool _stdcall cyno_NormalRand1DArray(SAFEARRAY* psaOutArr);
 CYNOMATHUTILITY_API bool _stdcall cyno_NormalRand1DArray(double* outArray, int size);
 CYNOMATHUTILITY_API bool __stdcall cyno_NormalRand1DArrayAntithetic(double* outArray, int size, short randflag);
-
-CYNOMATHUTILITY_API bool _stdcall cyno_CorrelatedNormalRand2DArray(SAFEARRAY** psaMatrix, SAFEARRAY** psaOutArr, short randflag);
 
 // Plain-array APIs for cross-platform callers.
 CYNOMATHUTILITY_API bool __stdcall cyno_Rand1DArrayPlain(double* outArray, long size);
@@ -151,11 +86,16 @@ CYNOMATHUTILITY_API bool __stdcall cyno_Sobol1DArrayPlain(double* outArray, long
 CYNOMATHUTILITY_API bool __stdcall cyno_SobolNormal1DArrayPlain(double* outArray, long size);
 CYNOMATHUTILITY_API bool __stdcall cyno_Sobol2DArrayPlain(double* outArray, long dim, long samplesPerFactor);
 CYNOMATHUTILITY_API bool __stdcall cyno_SobolNormal2DArrayPlain(double* outArray, long dim, long samplesPerFactor);
-#include "equityPath.h"
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand1DArrayPlain(const double* correlationMatrix, long dim, double* outArray, short randflag);
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand2DArrayPlain(const double* correlationMatrix, long dim, double* outArray, long samplesPerFactor, short randflag);
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand1DArrayPlainAntithetic(const double* correlationMatrix, long dim, double* outArray, double* antitheticOutArray, short randflag);
 CYNOMATHUTILITY_API bool __stdcall cyno_CorrelatedNormalRand2DArrayPlainAntithetic(const double* correlationMatrix, long dim, double* outArray, long samplesPerFactor, short randflag);
+CYNOMATHUTILITY_API bool __stdcall cyno_EquityPathPlain(double spot, const double* dt, const double* drift, const double* dividend, const double* sigma, long nSteps, double* outPath, short randflag);
+CYNOMATHUTILITY_API bool __stdcall cyno_EquityPathAntitheticPlain(double spot, const double* dt, const double* drift, const double* dividend, const double* sigma, long nSteps, double* outPath, double* antitheticOutPath, short randflag);
+CYNOMATHUTILITY_API bool __stdcall cyno_EquityPathSobolPlain(double spot, const double* dt, const double* drift, const double* dividend, const double* sigma, long nSteps, double* outPath);
+CYNOMATHUTILITY_API bool __stdcall cyno_EquityPathsPlain(const double* spots, long nStocks, const double* correlationMatrix, const double* dt, const double* drift, const double* dividend, const double* sigma, long nSteps, double* outPaths, short randflag);
+CYNOMATHUTILITY_API bool __stdcall cyno_EquityPathsAntitheticPlain(const double* spots, long nStocks, const double* correlationMatrix, const double* dt, const double* drift, const double* dividend, const double* sigma, long nSteps, double* outPaths, double* antitheticOutPaths, short randflag);
+CYNOMATHUTILITY_API bool __stdcall cyno_EquityPathsSobolPlain(const double* spots, long nStocks, const double* correlationMatrix, const double* dt, const double* drift, const double* dividend, const double* sigma, long nSteps, double* outPaths);
 
 CYNOMATHUTILITY_API bool __stdcall cyno_MatrixScalePlain(double a, const double* input, long rows, long cols, double* output);
 CYNOMATHUTILITY_API bool __stdcall cyno_MatrixMultiplyPlain(const double* a, long aRows, long aCols, const double* b, long bRows, long bCols, double* output);

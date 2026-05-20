@@ -18,6 +18,8 @@
 //		it should be called like cyno_sort(index(0), x(0), ...)
 //Change history
 //		Jan 31, 2020 - created from an older version by Jesse
+//  May 14, 2026 - Jesse Wang
+// reviewed by Codex and this index sorting is good to keep. it is much faster than c# and java
 
 CYNOMATHUTILITY_API int __stdcall cyno_Sort(int* index1, double* x, int n)
 {

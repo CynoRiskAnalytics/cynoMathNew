@@ -4,6 +4,10 @@
 #include "math.h"
 #include <stdlib.h>
 
+//May 14 -Jesse Wang
+//This is largely written by Codex, has been tested in excel/vba 
+//Need to review it later, and change the coding in my way
+
 static double* equity_alloc_double_buffer(long size) {
     return (double*)malloc((size_t)size * sizeof(double));
 }
